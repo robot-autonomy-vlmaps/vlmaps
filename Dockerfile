@@ -67,11 +67,19 @@ RUN chmod +x /tmp/install.bash
 # Install all dependencies using install.bash
 # This ensures single source of truth - update install.bash, not Dockerfile
 # Docker layer caching: each step is cached, so rebuilds are faster if only code changes
-# Note: conda activate doesn't work in non-interactive RUN, so we use conda run to execute install.bash
+# Note: conda activate doesn't work in non-interactive RUN, so we execute install.bash commands directly
+# using the conda environment's Python/pip paths
 RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
     cd /tmp && \
     cp requirements.txt . && \
-    conda run -n vlmaps --no-capture-output bash install.bash && \
+    /opt/conda/envs/vlmaps/bin/python -m pip install --upgrade 'pip<24.1' && \
+    /opt/conda/envs/vlmaps/bin/pip install -r requirements.txt && \
+    conda run -n vlmaps --no-capture-output conda install habitat-sim=0.2.2 -c conda-forge -c aihabitat -y && \
+    cd ~ && \
+    git clone --recursive https://github.com/cvg/Hierarchical-Localization/ && \
+    cd Hierarchical-Localization && \
+    git checkout 936040e8d67244cc6c8c9d1667701f3ce87bf075 && \
+    /opt/conda/envs/vlmaps/bin/python -m pip install -e . && \
     conda clean -ya"
 
 # Activate the vlmaps conda environment on container startup
