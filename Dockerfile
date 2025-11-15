@@ -64,23 +64,31 @@ COPY requirements.txt /tmp/requirements.txt
 COPY install.bash /tmp/install.bash
 RUN chmod +x /tmp/install.bash
 
-# Install all dependencies using install.bash
-# This ensures single source of truth - update install.bash, not Dockerfile
-# Docker layer caching: each step is cached, so rebuilds are faster if only code changes
-# Note: conda activate doesn't work in non-interactive RUN, so we execute install.bash commands directly
-# using the conda environment's Python/pip paths
+# Install all dependencies (separated for easier debugging and better caching)
+# This mirrors install.bash but uses direct conda paths (conda activate doesn't work in non-interactive RUN)
+
+# Step 1: Upgrade pip to compatible version
+RUN /opt/conda/envs/vlmaps/bin/python -m pip install --upgrade 'pip<24.1'
+
+# Step 2: Install Python packages from requirements.txt
+RUN /opt/conda/envs/vlmaps/bin/pip install -r /tmp/requirements.txt
+
+# Step 3: Install habitat-sim (this is the slowest step, ~10-15 minutes)
 RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-    cd /tmp && \
-    cp requirements.txt . && \
-    /opt/conda/envs/vlmaps/bin/python -m pip install --upgrade 'pip<24.1' && \
-    /opt/conda/envs/vlmaps/bin/pip install -r requirements.txt && \
-    conda run -n vlmaps --no-capture-output conda install habitat-sim=0.2.2 -c conda-forge -c aihabitat -y && \
-    cd ~ && \
+    conda run -n vlmaps --no-capture-output conda install habitat-sim=0.2.2 -c conda-forge -c aihabitat -y"
+
+# Step 4: Clone Hierarchical-Localization
+RUN cd ~ && \
     git clone --recursive https://github.com/cvg/Hierarchical-Localization/ && \
     cd Hierarchical-Localization && \
-    git checkout 936040e8d67244cc6c8c9d1667701f3ce87bf075 && \
-    /opt/conda/envs/vlmaps/bin/python -m pip install -e . && \
-    conda clean -ya"
+    git checkout 936040e8d67244cc6c8c9d1667701f3ce87bf075
+
+# Step 5: Install Hierarchical-Localization
+RUN cd ~/Hierarchical-Localization && \
+    /opt/conda/envs/vlmaps/bin/python -m pip install -e .
+
+# Step 6: Clean up conda cache
+RUN conda clean -ya
 
 # Activate the vlmaps conda environment on container startup
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
