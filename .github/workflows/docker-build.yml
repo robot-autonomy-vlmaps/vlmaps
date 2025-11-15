@@ -51,6 +51,14 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Free disk space (GitHub Actions runners can run out of space)
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:

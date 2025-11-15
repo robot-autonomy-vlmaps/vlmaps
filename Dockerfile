@@ -69,19 +69,20 @@ RUN chmod +x /tmp/install.bash
 
 # Step 1: Upgrade pip to compatible version and verify
 RUN /opt/conda/envs/vlmaps/bin/python -m pip install --upgrade 'pip<24.1' && \
-    /opt/conda/envs/vlmaps/bin/pip --version
+    /opt/conda/envs/vlmaps/bin/pip --version && \
+    conda clean -ya
 
 # Step 2: Install Python packages from requirements.txt
-# Using verbose output to see what's failing
-RUN /opt/conda/envs/vlmaps/bin/pip install --verbose -r /tmp/requirements.txt || \
-    (echo "Failed to install packages. Checking pip and requirements.txt..." && \
-    /opt/conda/envs/vlmaps/bin/pip --version && \
-    cat /tmp/requirements.txt && \
-    exit 1)
+# Clean pip cache after installation to save space
+RUN /opt/conda/envs/vlmaps/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
+    /opt/conda/envs/vlmaps/bin/pip cache purge && \
+    conda clean -ya
 
 # Step 3: Install habitat-sim (this is the slowest step, ~10-15 minutes)
+# Clean conda cache after to save space
 RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-    conda run -n vlmaps --no-capture-output conda install habitat-sim=0.2.2 -c conda-forge -c aihabitat -y"
+    conda run -n vlmaps --no-capture-output conda install habitat-sim=0.2.2 -c conda-forge -c aihabitat -y && \
+    conda clean -ya"
 
 # Step 4: Clone Hierarchical-Localization
 RUN cd ~ && \
@@ -91,7 +92,8 @@ RUN cd ~ && \
 
 # Step 5: Install Hierarchical-Localization
 RUN cd ~/Hierarchical-Localization && \
-    /opt/conda/envs/vlmaps/bin/python -m pip install -e .
+    /opt/conda/envs/vlmaps/bin/python -m pip install --no-cache-dir -e . && \
+    /opt/conda/envs/vlmaps/bin/pip cache purge
 
 # Step 6: Clean up conda cache
 RUN conda clean -ya
