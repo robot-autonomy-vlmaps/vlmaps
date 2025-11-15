@@ -67,11 +67,17 @@ RUN chmod +x /tmp/install.bash
 # Install all dependencies (separated for easier debugging and better caching)
 # This mirrors install.bash but uses direct conda paths (conda activate doesn't work in non-interactive RUN)
 
-# Step 1: Upgrade pip to compatible version
-RUN /opt/conda/envs/vlmaps/bin/python -m pip install --upgrade 'pip<24.1'
+# Step 1: Upgrade pip to compatible version and verify
+RUN /opt/conda/envs/vlmaps/bin/python -m pip install --upgrade 'pip<24.1' && \
+    /opt/conda/envs/vlmaps/bin/pip --version
 
 # Step 2: Install Python packages from requirements.txt
-RUN /opt/conda/envs/vlmaps/bin/pip install -r /tmp/requirements.txt
+# Using verbose output to see what's failing
+RUN /opt/conda/envs/vlmaps/bin/pip install --verbose -r /tmp/requirements.txt || \
+    (echo "Failed to install packages. Checking pip and requirements.txt..." && \
+    /opt/conda/envs/vlmaps/bin/pip --version && \
+    cat /tmp/requirements.txt && \
+    exit 1)
 
 # Step 3: Install habitat-sim (this is the slowest step, ~10-15 minutes)
 RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
