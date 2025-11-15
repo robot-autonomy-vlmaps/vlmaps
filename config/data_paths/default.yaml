@@ -1,2 +1,2 @@
-habitat_scene_dir: "/Users/huang/hcg/projects/vln/data/mp3d"
-vlmaps_data_dir: "/Users/huang/hcg/projects/vln/data/vlmaps_dataset"
+habitat_scene_dir: "/data/mp3d_data/scans"
+vlmaps_data_dir: "/data/mp3d_data/tasks/mp3d"
