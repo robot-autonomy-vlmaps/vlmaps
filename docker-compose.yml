@@ -1,0 +1,50 @@
+services:
+  vlmaps:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vlmaps-dev
+    image: vlmaps-dev:latest
+    
+    # GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # Volume mounts
+    volumes:
+      # Mount project files (current directory) to /vlmaps in container
+      - .:/vlmaps
+      # Mount Matterport3D data directory (must be set via VLMAPS_MP3D_DATA_DIR env var)
+      - ${VLMAPS_MP3D_DATA_DIR}:/data/mp3d_data
+      # Preserve bash history
+      - vlmaps-bash-history:/root/.bash_history
+      # X11 forwarding
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/.Xauthority:/root/.Xauthority:ro
+    
+    # Environment variables
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - DEBIAN_FRONTEND=noninteractive
+    
+    # Network and IPC settings for X11
+    network_mode: host
+    ipc: host
+    
+    # Keep container running
+    stdin_open: true
+    tty: true
+    
+    # Default command (interactive bash with conda environment)
+    command: /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate vlmaps && exec /bin/bash"
+
+volumes:
+  vlmaps-bash-history:
+
