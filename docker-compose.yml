@@ -1,10 +1,13 @@
 services:
   vlmaps:
+    # Use pre-built image from GitHub Container Registry (faster)
+    # Set VLMAPS_IMAGE env var to override, or set VLMAPS_BUILD_LOCAL=true to build locally
+    # Default: ghcr.io/robot-autonomy-vlmaps/vlmaps:latest
+    image: ${VLMAPS_IMAGE:-ghcr.io/robot-autonomy-vlmaps/vlmaps:latest}
     build:
       context: .
       dockerfile: Dockerfile
     container_name: vlmaps-dev
-    image: vlmaps-dev:latest
     
     # GPU support
     deploy:
