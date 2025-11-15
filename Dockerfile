@@ -67,13 +67,12 @@ RUN chmod +x /tmp/install.bash
 # Install all dependencies using install.bash
 # This ensures single source of truth - update install.bash, not Dockerfile
 # Docker layer caching: each step is cached, so rebuilds are faster if only code changes
+# Note: conda activate doesn't work in non-interactive RUN, so we use conda run to execute install.bash
 RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-    conda activate vlmaps && \
     cd /tmp && \
     cp requirements.txt . && \
-    bash install.bash && \
-    conda clean -ya && \
-    rm -rf ~/Hierarchical-Localization/.git"
+    conda run -n vlmaps --no-capture-output bash install.bash && \
+    conda clean -ya"
 
 # Activate the vlmaps conda environment on container startup
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
