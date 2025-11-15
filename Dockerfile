@@ -58,6 +58,23 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0
 # Conda environment for vlmaps
 RUN conda create -n vlmaps python=3.8 -y
 
+# Copy requirements.txt and install.bash for dependency installation
+# These are copied during build (before volume mount at runtime)
+COPY requirements.txt /tmp/requirements.txt
+COPY install.bash /tmp/install.bash
+RUN chmod +x /tmp/install.bash
+
+# Install all dependencies using install.bash
+# This ensures single source of truth - update install.bash, not Dockerfile
+# Docker layer caching: each step is cached, so rebuilds are faster if only code changes
+RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+    conda activate vlmaps && \
+    cd /tmp && \
+    cp requirements.txt . && \
+    bash install.bash && \
+    conda clean -ya && \
+    rm -rf ~/Hierarchical-Localization/.git"
+
 # Activate the vlmaps conda environment on container startup
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo 'export PYTHONPATH="${PYTHONPATH}:/vlmaps/"' >> ~/.bashrc && \

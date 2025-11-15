@@ -1,0 +1,64 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data (don't include in image)
+data/
+*.npy
+*.npz
+*.h5
+*.hdf5
+
+# Logs
+*.log
+logs/
+wandb/
+runs/
+
+# Environment
+.env
+.venv
+venv/
+env/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Media (large files)
+media/*.gif
+media/*.mp4
+
+# Temporary files
+*.tmp
+*.bak
+.DS_Store
+
+# Matterport3D data script
+download_mp.py
+
+
