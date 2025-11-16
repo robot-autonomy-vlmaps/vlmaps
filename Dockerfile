@@ -15,7 +15,8 @@ ARG HLOC_COMMIT=936040e8d67244cc6c8c9d1667701f3ce87bf075
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/conda/bin:$PATH \
     CONDA_AUTO_UPDATE_CONDA=false \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    TERM=xterm-256color
 
 # Install system dependencies in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -93,10 +94,16 @@ RUN git clone --recursive https://github.com/cvg/Hierarchical-Localization.git ~
     /opt/conda/envs/vlmaps/bin/pip install --no-cache-dir -e . && \
     /opt/conda/envs/vlmaps/bin/pip cache purge
 
-# Configure shell environment for conda activation
+# Configure shell environment for conda activation and colors
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo 'export PYTHONPATH="${PYTHONPATH}:/vlmaps/"' >> ~/.bashrc && \
-    echo "conda activate vlmaps" >> ~/.bashrc
+    echo "conda activate vlmaps" >> ~/.bashrc && \
+    echo 'export TERM=xterm-256color' >> ~/.bashrc && \
+    echo 'alias ls="ls --color=auto"' >> ~/.bashrc && \
+    echo 'alias grep="grep --color=auto"' >> ~/.bashrc && \
+    echo 'alias fgrep="fgrep --color=auto"' >> ~/.bashrc && \
+    echo 'alias egrep="egrep --color=auto"' >> ~/.bashrc && \
+    echo 'export PS1="\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "' >> ~/.bashrc
 
 # Final cleanup
 RUN conda clean -afy && \

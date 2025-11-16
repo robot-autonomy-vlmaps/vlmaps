@@ -39,10 +39,10 @@ fi
 # Check if container is running
 if $DOCKER_COMPOSE ps 2>/dev/null | grep -q "vlmaps-dev.*Up"; then
     echo "Container is already running. Attaching..."
-    $DOCKER_COMPOSE exec vlmaps /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate vlmaps && exec /bin/bash"
+    $DOCKER_COMPOSE exec -e TERM=${TERM:-xterm-256color} vlmaps /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate vlmaps && exec /bin/bash"
 else
     echo "Starting container with docker-compose..."
     $DOCKER_COMPOSE up -d
     echo "Attaching to container..."
-    $DOCKER_COMPOSE exec vlmaps /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate vlmaps && exec /bin/bash"
+    $DOCKER_COMPOSE exec -e TERM=${TERM:-xterm-256color} vlmaps /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate vlmaps && exec /bin/bash"
 fi
