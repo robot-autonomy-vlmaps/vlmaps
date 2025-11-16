@@ -1,15 +1,35 @@
 # Base image with NVIDIA CUDA with OPENGL support
 FROM nvidia/cudagl:11.3.0-devel-ubuntu20.04
 
-# Add NVIDIA GPG keys and repositories
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub && \
-    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub && \
-    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
-    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list
+# Metadata labels for better image management
+LABEL maintainer="vlmaps"
+LABEL description="VLMaps Docker image with CUDA 11.3.0, Ubuntu 20.04, and all dependencies"
+LABEL org.opencontainers.image.source="https://github.com/vlmaps/vlmaps"
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Build arguments for versioning (can be overridden)
+ARG PYTHON_VERSION=3.8
+ARG CMAKE_VERSION=3.14.0
+ARG HLOC_COMMIT=936040e8d67244cc6c8c9d1667701f3ce87bf075
 
-# Install system dependencies
+# Environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    PATH=/opt/conda/bin:$PATH \
+    CONDA_AUTO_UPDATE_CONDA=false \
+    PYTHONUNBUFFERED=1
+
+# Add NVIDIA repositories using modern method (apt-key is deprecated)
+# Use proper keyring management instead of apt-key
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gnupg2 \
+    ca-certificates && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub | gpg --dearmor -o /etc/apt/keyrings/nvidia-cuda.gpg && \
+    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub | gpg --dearmor -o /etc/apt/keyrings/nvidia-ml.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nvidia-cuda.gpg] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
+    echo "deb [signed-by=/etc/apt/keyrings/nvidia-ml.gpg] https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install system dependencies in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
@@ -35,85 +55,67 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     x11-apps \
     x11-xserver-utils \
     unzip && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install Miniconda
-RUN curl -L -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
-    chmod +x ~/miniconda.sh && \
-    ~/miniconda.sh -b -p /opt/conda && \
-    rm ~/miniconda.sh && \
+# Install Miniconda and configure in a single layer
+RUN curl -L -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    chmod +x /tmp/miniconda.sh && \
+    /tmp/miniconda.sh -b -p /opt/conda && \
+    rm /tmp/miniconda.sh && \
     /opt/conda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     /opt/conda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
-    /opt/conda/bin/conda install numpy pyyaml scipy ipython mkl mkl-include -y && \
-    /opt/conda/bin/conda install mamba -n base -c conda-forge -y && \
-    /opt/conda/bin/conda clean -ya
-
-# Add conda to PATH
-ENV PATH=/opt/conda/bin:$PATH
+    /opt/conda/bin/conda install -y numpy pyyaml scipy ipython mkl mkl-include && \
+    /opt/conda/bin/conda install -n base -c conda-forge -y mamba && \
+    /opt/conda/bin/conda config --add channels conda-forge && \
+    /opt/conda/bin/conda config --set channel_priority flexible && \
+    /opt/conda/bin/conda clean -afy
 
 # Install CMake
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.sh && \
-    mkdir /opt/cmake && \
-    sh ./cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && \
-    rm cmake-3.14.0-Linux-x86_64.sh
+RUN wget -q https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh -O /tmp/cmake.sh && \
+    mkdir -p /opt/cmake && \
+    sh /tmp/cmake.sh --prefix=/opt/cmake --skip-license && \
+    ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake && \
+    rm /tmp/cmake.sh
 
-# Conda environment for vlmaps
-RUN conda create -n vlmaps python=3.8 -y
+# Create conda environment and configure
+RUN conda create -n vlmaps python=${PYTHON_VERSION} -y && \
+    conda clean -afy
 
-# Configure conda for better dependency resolution
-# Set conda-forge as default channel and use libmamba solver
-RUN conda config --add channels conda-forge && \
-    conda config --set channel_priority flexible
-
-# Copy requirements.txt and install.bash for dependency installation
-# These are copied during build (before volume mount at runtime)
+# Copy dependency files early for better layer caching
 COPY requirements.txt /tmp/requirements.txt
-COPY install.bash /tmp/install.bash
-RUN chmod +x /tmp/install.bash
 
-# Install all dependencies (separated for easier debugging and better caching)
-# This mirrors install.bash but uses direct conda paths (conda activate doesn't work in non-interactive RUN)
-# IMPORTANT: Install habitat-sim FIRST via conda/mamba to avoid dependency conflicts with pip packages
-
-# Step 1: Install habitat-sim first (before pip packages to avoid conflicts)
-# Mamba is much faster than conda for dependency resolution and handles conflicts better
-# Try mamba first, fall back to conda with libmamba solver, then regular conda
+# Install habitat-sim first (before pip packages to avoid conflicts)
+# Use mamba for faster dependency resolution with fallback to conda
 RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
     /opt/conda/bin/mamba install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y || \
     (/opt/conda/bin/conda install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y --solver=libmamba || \
     /opt/conda/bin/conda install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y) && \
-    conda clean -ya"
+    conda clean -afy"
 
-# Step 2: Upgrade pip to compatible version and verify
-RUN /opt/conda/envs/vlmaps/bin/python -m pip install --upgrade 'pip<24.1' && \
-    /opt/conda/envs/vlmaps/bin/pip --version && \
-    conda clean -ya
-
-# Step 3: Install Python packages from requirements.txt
-# Clean pip cache after installation to save space
-RUN /opt/conda/envs/vlmaps/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
+# Upgrade pip and install Python packages
+RUN /opt/conda/envs/vlmaps/bin/python -m pip install --no-cache-dir --upgrade 'pip<24.1' && \
+    /opt/conda/envs/vlmaps/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
     /opt/conda/envs/vlmaps/bin/pip cache purge && \
-    conda clean -ya
+    conda clean -afy
 
-# Step 4: Clone Hierarchical-Localization
-RUN cd ~ && \
-    git clone --recursive https://github.com/cvg/Hierarchical-Localization/ && \
-    cd Hierarchical-Localization && \
-    git checkout 936040e8d67244cc6c8c9d1667701f3ce87bf075
-
-# Step 5: Install Hierarchical-Localization
-RUN cd ~/Hierarchical-Localization && \
-    /opt/conda/envs/vlmaps/bin/python -m pip install --no-cache-dir -e . && \
+# Clone and install Hierarchical-Localization
+RUN git clone --recursive https://github.com/cvg/Hierarchical-Localization.git ~/Hierarchical-Localization && \
+    cd ~/Hierarchical-Localization && \
+    git checkout ${HLOC_COMMIT} && \
+    /opt/conda/envs/vlmaps/bin/pip install --no-cache-dir -e . && \
     /opt/conda/envs/vlmaps/bin/pip cache purge
 
-# Step 6: Clean up conda cache
-RUN conda clean -ya
-
-# Activate the vlmaps conda environment on container startup
+# Configure shell environment for conda activation
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo 'export PYTHONPATH="${PYTHONPATH}:/vlmaps/"' >> ~/.bashrc && \
     echo "conda activate vlmaps" >> ~/.bashrc
 
-# Set the working directory (will be overridden by volume mount)
+# Final cleanup
+RUN conda clean -afy && \
+    rm -rf /tmp/* /var/tmp/* /root/.cache
+
+# Set working directory
 WORKDIR /vlmaps
+
+# Default command (can be overridden)
+CMD ["/bin/bash"]
