@@ -37,8 +37,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Miniconda (latest version)
-RUN curl -L -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+# Install Miniconda
+RUN curl -L -o ~/miniconda.sh -O https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -k && \
     chmod +x ~/miniconda.sh && \
     ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh && \
