@@ -16,7 +16,9 @@ else
 fi
 
 cd ~
-git clone --recursive https://github.com/cvg/Hierarchical-Localization/
+if [ ! -d "Hierarchical-Localization" ]; then
+    git clone --recursive https://github.com/cvg/Hierarchical-Localization/
+fi
 cd Hierarchical-Localization/
 
 # switch to a compatible version of hloc, see the commit: https://github.com/cvg/Hierarchical-Localization/commit/936040e8d67244cc6c8c9d1667701f3ce87bf075
