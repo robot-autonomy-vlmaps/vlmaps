@@ -1,11 +1,11 @@
-# Base image with NVIDIA CUDA support
-FROM nvidia/cudagl:10.1-devel-ubuntu18.04
+# Base image with NVIDIA CUDA with OPENGL support
+FROM nvidia/cudagl:11.3.0-devel-ubuntu20.04
 
 # Add NVIDIA GPG keys and repositories
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub && \
-    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub && \
-    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
-    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub && \
+    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub && \
+    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
+    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -37,8 +37,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Miniconda (using version compatible with Ubuntu 18.04 GLIBC 2.27)
-RUN curl -L -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py38_4.9.2-Linux-x86_64.sh && \
+# Install Miniconda (latest version)
+RUN curl -L -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     chmod +x ~/miniconda.sh && \
     ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh && \
@@ -59,6 +59,11 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0
 # Conda environment for vlmaps
 RUN conda create -n vlmaps python=3.8 -y
 
+# Configure conda for better dependency resolution
+# Set conda-forge as default channel and use libmamba solver
+RUN conda config --add channels conda-forge && \
+    conda config --set channel_priority flexible
+
 # Copy requirements.txt and install.bash for dependency installation
 # These are copied during build (before volume mount at runtime)
 COPY requirements.txt /tmp/requirements.txt
@@ -67,24 +72,27 @@ RUN chmod +x /tmp/install.bash
 
 # Install all dependencies (separated for easier debugging and better caching)
 # This mirrors install.bash but uses direct conda paths (conda activate doesn't work in non-interactive RUN)
+# IMPORTANT: Install habitat-sim FIRST via conda/mamba to avoid dependency conflicts with pip packages
 
-# Step 1: Upgrade pip to compatible version and verify
+# Step 1: Install habitat-sim first (before pip packages to avoid conflicts)
+# Mamba is much faster than conda for dependency resolution and handles conflicts better
+# Try mamba first, fall back to conda with libmamba solver, then regular conda
+RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+    /opt/conda/bin/mamba install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y || \
+    (/opt/conda/bin/conda install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y --solver=libmamba || \
+    /opt/conda/bin/conda install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y) && \
+    conda clean -ya"
+
+# Step 2: Upgrade pip to compatible version and verify
 RUN /opt/conda/envs/vlmaps/bin/python -m pip install --upgrade 'pip<24.1' && \
     /opt/conda/envs/vlmaps/bin/pip --version && \
     conda clean -ya
 
-# Step 2: Install Python packages from requirements.txt
+# Step 3: Install Python packages from requirements.txt
 # Clean pip cache after installation to save space
 RUN /opt/conda/envs/vlmaps/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
     /opt/conda/envs/vlmaps/bin/pip cache purge && \
     conda clean -ya
-
-# Step 3: Install habitat-sim (upgraded to latest version, using mamba for faster solving)
-# Mamba is much faster than conda for dependency resolution
-# Clean conda cache after to save space
-RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-    /opt/conda/bin/mamba install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y && \
-    conda clean -ya"
 
 # Step 4: Clone Hierarchical-Localization
 RUN cd ~ && \
