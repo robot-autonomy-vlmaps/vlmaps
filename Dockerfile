@@ -43,6 +43,7 @@ RUN curl -L -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py3
     ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh && \
     /opt/conda/bin/conda install numpy pyyaml scipy ipython mkl mkl-include -y && \
+    /opt/conda/bin/conda install mamba -n base -c conda-forge -y && \
     /opt/conda/bin/conda clean -ya
 
 # Add conda to PATH
@@ -78,10 +79,11 @@ RUN /opt/conda/envs/vlmaps/bin/pip install --no-cache-dir -r /tmp/requirements.t
     /opt/conda/envs/vlmaps/bin/pip cache purge && \
     conda clean -ya
 
-# Step 3: Install habitat-sim (this is the slowest step, ~10-15 minutes)
+# Step 3: Install habitat-sim (upgraded to latest version, using mamba for faster solving)
+# Mamba is much faster than conda for dependency resolution
 # Clean conda cache after to save space
 RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-    conda run -n vlmaps --no-capture-output conda install habitat-sim=0.2.2 -c conda-forge -c aihabitat -y && \
+    /opt/conda/bin/mamba install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y && \
     conda clean -ya"
 
 # Step 4: Clone Hierarchical-Localization
