@@ -37,17 +37,8 @@ update_config_file() {
     read -p "Update config file? (yes/no): " update_config
     
     if [[ "$update_config" =~ ^[Yy][Ee][Ss]$ ]]; then
-        # Determine the correct paths
-        # habitat_scene_dir should point to scans directory
-        HABITAT_SCENE_DIR="$DATA_DIR/scans"
-        # vlmaps_data_dir should point to tasks/mp3d (after unzip) or tasks
-        if [ -d "$DATA_DIR/tasks/mp3d" ]; then
-            VLMAPS_DATA_DIR="$DATA_DIR/tasks/mp3d"
-        elif [ -d "$DATA_DIR/tasks/mp3d_habitat" ]; then
-            VLMAPS_DATA_DIR="$DATA_DIR/tasks/mp3d_habitat"
-        else
-            VLMAPS_DATA_DIR="$DATA_DIR/tasks"
-        fi
+        HABITAT_SCENE_DIR="$DATA_DIR/tasks/mp3d"
+        VLMAPS_DATA_DIR="$DATA_DIR/vlmaps_dataset"
         
         # Backup original config
         cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
@@ -132,15 +123,21 @@ if [ "$SHOULD_DOWNLOAD" = true ]; then
         rm -rf "$DATA_DIR/tasks/v1"
     fi
     
+    # Create vlmaps_dataset directory for future use
+    mkdir -p "$DATA_DIR/vlmaps_dataset"
+    
     echo ""
     echo "Download complete!"
     echo "Data is available at: $DATA_DIR"
     echo ""
     echo "Directory structure:"
-    echo "  $DATA_DIR/scans/  - Scene scans"
-    echo "  $DATA_DIR/tasks/   - Habitat tasks"
+    echo "  $DATA_DIR/scans/         - Matterport3D scene scans"
+    echo "  $DATA_DIR/tasks/         - Habitat tasks"
+    echo "  $DATA_DIR/vlmaps_dataset - VLMaps dataset (will be populated by generate_dataset.py)"
 else
     echo "Skipping download. Using existing data at: $DATA_DIR"
+    # Ensure vlmaps_dataset directory exists even when skipping download
+    mkdir -p "$DATA_DIR/vlmaps_dataset"
 fi
 
 # Always ask to update config file (regardless of whether data was downloaded)
