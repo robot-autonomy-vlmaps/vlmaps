@@ -17,18 +17,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     CONDA_AUTO_UPDATE_CONDA=false \
     PYTHONUNBUFFERED=1
 
-# Add NVIDIA repositories using modern method (apt-key is deprecated)
-# Use proper keyring management instead of apt-key
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gnupg2 \
-    ca-certificates && \
-    mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub | gpg --dearmor -o /etc/apt/keyrings/nvidia-cuda.gpg && \
-    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub | gpg --dearmor -o /etc/apt/keyrings/nvidia-ml.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nvidia-cuda.gpg] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
-    echo "deb [signed-by=/etc/apt/keyrings/nvidia-ml.gpg] https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list && \
-    rm -rf /var/lib/apt/lists/*
-
 # Install system dependencies in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
