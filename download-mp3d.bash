@@ -115,7 +115,10 @@ if [ "$SHOULD_DOWNLOAD" = true ]; then
     # Download scans
     echo "Downloading scans for scene $SCENE_ID..."
     cd /vlmaps
-    python download_mp.py -o "$DATA_DIR/scans" --id "$SCENE_ID"
+    python download_mp.py -o "$DATA_DIR/scans" --id "$SCENE_ID" || {
+        echo "Error: Failed to download scans" >&2
+        exit 1
+    }
     if [ -d "$DATA_DIR/scans/v1/scans/$SCENE_ID" ]; then
         cp -a "$DATA_DIR/scans/v1/scans/$SCENE_ID/." "$DATA_DIR/scans/" && \
         rm -rf "$DATA_DIR/scans/v1"
