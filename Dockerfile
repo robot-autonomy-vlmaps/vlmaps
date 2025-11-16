@@ -2,9 +2,9 @@
 FROM nvidia/cudagl:11.3.0-devel-ubuntu20.04
 
 # Metadata labels for better image management
-LABEL maintainer="vlmaps"
+LABEL maintainer="robot-autonomy-vlmaps"
 LABEL description="VLMaps Docker image with CUDA 11.3.0, Ubuntu 20.04, and all dependencies"
-LABEL org.opencontainers.image.source="https://github.com/vlmaps/vlmaps"
+LABEL org.opencontainers.image.source="https://github.com/robot-autonomy-vlmaps/vlmaps"
 
 # Build arguments for versioning (can be overridden)
 ARG PYTHON_VERSION=3.8
