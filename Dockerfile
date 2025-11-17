@@ -8,7 +8,7 @@ LABEL description="VLMaps Docker image with CUDA 12.4, Ubuntu 22.04, and all dep
 LABEL org.opencontainers.image.source="https://github.com/robot-autonomy-vlmaps/vlmaps"
 
 # Build arguments for versioning (can be overridden)
-ARG PYTHON_VERSION=3.10
+ARG PYTHON_VERSION=3.9
 ARG CMAKE_VERSION=3.14.0
 ARG HLOC_COMMIT=936040e8d67244cc6c8c9d1667701f3ce87bf075
 
