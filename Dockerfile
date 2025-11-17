@@ -1,14 +1,13 @@
-# Base image with NVIDIA CUDA 12.4 on Ubuntu 22.04 (OpenGL libs installed below)
-ARG CUDA_IMAGE_TAG=12.4.1-devel-ubuntu22.04
-FROM nvidia/cuda:${CUDA_IMAGE_TAG}
+# Base image with NVIDIA CUDA with OPENGL support
+FROM nvidia/cudagl:11.3.0-devel-ubuntu20.04
 
 # Metadata labels for better image management
 LABEL maintainer="robot-autonomy-vlmaps"
-LABEL description="VLMaps Docker image with CUDA 12.4, Ubuntu 22.04, and all dependencies"
+LABEL description="VLMaps Docker image with CUDA 11.3.0, Ubuntu 20.04, and all dependencies"
 LABEL org.opencontainers.image.source="https://github.com/robot-autonomy-vlmaps/vlmaps"
 
 # Build arguments for versioning (can be overridden)
-ARG PYTHON_VERSION=3.9
+ARG PYTHON_VERSION=3.8
 ARG CMAKE_VERSION=3.14.0
 ARG HLOC_COMMIT=936040e8d67244cc6c8c9d1667701f3ce87bf075
 
@@ -34,13 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libx11-dev \
     libomp-dev \
     libegl1-mesa-dev \
-    libgl1-mesa-dev \
     libgl1-mesa-glx \
-    libglu1-mesa-dev \
-    libxext6 \
-    libdrm-dev \
-    libxdamage-dev \
-    libxcb1 \
     pkg-config \
     wget \
     zip \
@@ -48,7 +41,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcursor-dev \
     libxinerama-dev \
     libxrandr-dev \
-    mesa-utils \
     x11-apps \
     x11-xserver-utils \
     unzip && \
@@ -89,9 +81,8 @@ RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
     /opt/conda/bin/conda install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y) && \
     conda clean -afy"
 
-# Upgrade pip and install PyTorch with CUDA 12.4 wheels
-RUN /opt/conda/envs/vlmaps/bin/python -m pip install --no-cache-dir --upgrade pip && \
-    /opt/conda/envs/vlmaps/bin/pip install --no-cache-dir torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124 && \
+# Upgrade pip and install Python packages
+RUN /opt/conda/envs/vlmaps/bin/python -m pip install --no-cache-dir --upgrade 'pip<24.1' && \
     /opt/conda/envs/vlmaps/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
     /opt/conda/envs/vlmaps/bin/pip cache purge && \
     conda clean -afy

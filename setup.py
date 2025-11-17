@@ -15,7 +15,7 @@ setup(
     name="vlmaps",
     version=version,
     packages=["vlmaps"],
-    python_requires=">=3.10",
+    python_requires=">=3.8",
     author="Chenguang Huang",
     description=description,
     long_description=readme,

@@ -1,11 +1,8 @@
 #!/bin/bash
-python -m pip install
+# Downgrade pip to version compatible with pytorch-lightning 1.8.1 metadata
+# Newer pip versions (24.1+) have stricter metadata validation
+python -m pip install --upgrade "pip<24.1"
 
-# Install PyTorch with CUDA 12.1 support (backward compatible with CUDA 12.4+)
-# This must be installed before other dependencies to ensure proper CUDA support
-pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
-
-# Install other Python dependencies
 pip install -r requirements.txt
 
 # Use mamba for faster dependency solving (drop-in replacement for conda)
