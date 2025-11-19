@@ -10,15 +10,20 @@
 # supported CodeQL languages.
 #
 name: "CodeQL"
+# Disabled - uncomment the 'on:' section below to enable
 
+# on:
+#   push:
+#     branches: [ "master" ]
+#   pull_request:
+#     # The branches below must be a subset of the branches above
+#     branches: [ "master" ]
+#   schedule:
+#     - cron: '22 5 * * 3'
+
+# Disable workflow by setting to never trigger
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ "master" ]
-  schedule:
-    - cron: '22 5 * * 3'
+  workflow_dispatch:  # Only runs if manually triggered
 
 jobs:
   analyze:
