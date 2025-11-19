@@ -8,11 +8,11 @@ pip install -r requirements.txt
 # Use mamba for faster dependency solving (drop-in replacement for conda)
 # If mamba is not available, falls back to conda
 if command -v mamba &> /dev/null; then
-    mamba install habitat-sim -c conda-forge -c aihabitat -y
+    mamba install habitat-sim headless -c conda-forge -c aihabitat -y
 else
     # Use conda with solver options to speed up resolution
-    conda install habitat-sim -c conda-forge -c aihabitat -y --solver=libmamba || \
-    conda install habitat-sim -c conda-forge -c aihabitat -y
+    conda install habitat-sim headless -c conda-forge -c aihabitat -y --solver=libmamba || \
+    conda install habitat-sim headless -c conda-forge -c aihabitat -y
 fi
 
 cd ~

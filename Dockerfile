@@ -73,12 +73,12 @@ RUN conda create -n vlmaps python=${PYTHON_VERSION} -y && \
 # Copy dependency files early for better layer caching
 COPY requirements.txt /tmp/requirements.txt
 
-# Install habitat-sim first (before pip packages to avoid conflicts)
+# Install the headless (EGL) build of habitat-sim before pip packages
 # Use mamba for faster dependency resolution with fallback to conda
 RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-    /opt/conda/bin/mamba install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y || \
-    (/opt/conda/bin/conda install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y --solver=libmamba || \
-    /opt/conda/bin/conda install -n vlmaps habitat-sim -c conda-forge -c aihabitat -y) && \
+    /opt/conda/bin/mamba install -n vlmaps habitat-sim headless -c conda-forge -c aihabitat -y || \
+    (/opt/conda/bin/conda install -n vlmaps habitat-sim headless -c conda-forge -c aihabitat -y --solver=libmamba || \
+    /opt/conda/bin/conda install -n vlmaps habitat-sim headless -c conda-forge -c aihabitat -y) && \
     conda clean -afy"
 
 # Upgrade pip and install Python packages
