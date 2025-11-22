@@ -1,33 +1,34 @@
 notebook
-# torch==1.13.1
-# torchvision==0.14.1
-# torchaudio==0.13.1
+# PyTorch with CUDA 12.4 support
+# Note: PyTorch should be installed via conda for local development:
+# conda install pytorch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 pytorch-cuda=12.4 -c pytorch -c nvidia
+# Or via pip: pip install torch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu124
+torch==2.5.0
+torchvision==0.20.0
+torchaudio==2.5.0
 git+https://github.com/openai/CLIP.git
 torch-encoding==1.2.1
-# opencv-python==4.7.0.68
-opencv-python==4.1.2.30
+opencv-python>=4.8.0
 imageio==2.23.0
 imageio-ffmpeg==0.4.7
-pytorch-lightning==1.8.1
+pytorch-lightning>=2.0.0
 altair==4.1.0
-timm==0.6.12
+timm>=0.9.0
 tensorboardX==2.2
-matplotlib==3.6.2
-test-tube==0.7.5
-wandb==0.13.7
-h5py==3.7.0
+matplotlib>=3.7.0
+wandb>=0.16.0
+h5py>=3.10.0
 cmake
-# gym==0.22.0
 open3d==0.17.0
-grad-cam==1.4.6
-networkx==2.8.8
+grad-cam>=1.4.7
+networkx>=3.0
 mpl_point_clicker==0.3.1
 ai2thor==5.0.0
 rospkg==1.4.0
 pyvisgraph==0.2.1
 gdown==4.6.0
-hydra-core==1.3.1
+hydra-core>=1.3.2
 google-cloud-speech==2.17.0
-sentence_transformers==2.2.2
-shapely==2.0.2
-openai==1.3.7
+sentence_transformers>=2.3.0
+shapely>=2.0.3
+openai>=1.0.0
