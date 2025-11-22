@@ -9,34 +9,36 @@ services:
       dockerfile: Dockerfile
     container_name: vlmaps-dev
     
-    # GPU support
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    
     # Volume mounts
     volumes:
       # Mount project files (current directory) to /vlmaps in container
-      - .:/vlmaps
+      - .:/vlmaps:cached
       # Mount Matterport3D data directory (must be set via VLMAPS_MP3D_DATA_DIR env var)
       - ${VLMAPS_MP3D_DATA_DIR}:/data/mp3d_data
       # Preserve bash history
       - vlmaps-bash-history:/root/.bash_history
-      # X11 forwarding
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # GUI support (X11 forwarding)
+      - /tmp/.X11-unix:/tmp/.X11-unix
       - ${HOME}/.Xauthority:/root/.Xauthority:ro
     
     # Environment variables
     environment:
+      # GUI support
       - DISPLAY=${DISPLAY:-:0}
+      # Use NVIDIA GPU for rendering (CUDA 12.4)
+      - __NV_PRIME_RENDER_OFFLOAD=1
+      - __GLX_VENDOR_LIBRARY_NAME=nvidia
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics,display
       - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=all
       - DEBIAN_FRONTEND=noninteractive
       - TERM=${TERM:-xterm-256color}
+    
+    # GPU support (CUDA 12.4)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
     
     # Network and IPC settings for X11
     network_mode: host

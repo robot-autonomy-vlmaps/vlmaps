@@ -1,13 +1,13 @@
-# Base image with NVIDIA CUDA with OPENGL support
-FROM nvidia/cudagl:11.3.0-devel-ubuntu20.04
+# Base image with NVIDIA CUDA (OpenGL will be installed separately)
+FROM nvidia/cuda:12.4.0-devel-ubuntu22.04
 
 # Metadata labels for better image management
 LABEL maintainer="robot-autonomy-vlmaps"
-LABEL description="VLMaps Docker image with CUDA 11.3.0, Ubuntu 20.04, and all dependencies"
+LABEL description="VLMaps Docker image with CUDA 12.4.0, Ubuntu 22.04, and all dependencies"
 LABEL org.opencontainers.image.source="https://github.com/robot-autonomy-vlmaps/vlmaps"
 
 # Build arguments for versioning (can be overridden)
-ARG PYTHON_VERSION=3.8
+ARG PYTHON_VERSION=3.9
 ARG CMAKE_VERSION=3.14.0
 ARG HLOC_COMMIT=936040e8d67244cc6c8c9d1667701f3ce87bf075
 
@@ -18,7 +18,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     TERM=xterm-256color
 
-# Install system dependencies in a single layer
+# Install system dependencies including OpenGL libraries (installed separately since we use nvidia/cuda base)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
@@ -34,6 +34,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libomp-dev \
     libegl1-mesa-dev \
     libgl1-mesa-glx \
+    libgl1-mesa-dri \
+    libglu1-mesa-dev \
+    libxext-dev \
+    libxrender-dev \
     pkg-config \
     wget \
     zip \
@@ -43,6 +47,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrandr-dev \
     x11-apps \
     x11-xserver-utils \
+    xvfb \
     unzip && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -73,16 +78,23 @@ RUN conda create -n vlmaps python=${PYTHON_VERSION} -y && \
 # Copy dependency files early for better layer caching
 COPY requirements.txt /tmp/requirements.txt
 
+# Install PyTorch with CUDA 12.4 via conda before other packages
+RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+    conda activate vlmaps && \
+    conda install -y pytorch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 pytorch-cuda=12.4 -c pytorch -c nvidia && \
+    conda clean -afy"
+
 # Install the headless (EGL) build of habitat-sim before pip packages
 # Use mamba for faster dependency resolution with fallback to conda
 RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+    conda activate vlmaps && \
     /opt/conda/bin/mamba install -n vlmaps habitat-sim headless -c conda-forge -c aihabitat -y || \
     (/opt/conda/bin/conda install -n vlmaps habitat-sim headless -c conda-forge -c aihabitat -y --solver=libmamba || \
     /opt/conda/bin/conda install -n vlmaps habitat-sim headless -c conda-forge -c aihabitat -y) && \
     conda clean -afy"
 
-# Upgrade pip and install Python packages
-RUN /opt/conda/envs/vlmaps/bin/python -m pip install --no-cache-dir --upgrade 'pip<24.1' && \
+# Upgrade pip to latest and install Python packages
+RUN /opt/conda/envs/vlmaps/bin/python -m pip install --no-cache-dir --upgrade pip && \
     /opt/conda/envs/vlmaps/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
     /opt/conda/envs/vlmaps/bin/pip cache purge && \
     conda clean -afy
