@@ -13,18 +13,21 @@ services:
     volumes:
       # Mount project files (current directory) to /vlmaps in container
       - .:/vlmaps:cached
-      # Mount Matterport3D data directory (must be set via VLMAPS_MP3D_DATA_DIR env var)
-      - ${VLMAPS_MP3D_DATA_DIR}:/data/mp3d_data
       # Preserve bash history
       - vlmaps-bash-history:/root/.bash_history
       # GUI support (X11 forwarding)
+      # /tmp/.X11-unix is the X11 socket directory (usually accessible to all users)
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ${HOME}/.Xauthority:/root/.Xauthority:ro
+      # XAUTHORITY file contains X11 authentication cookie
+      # Mount to a writable location in container, use XAUTHORITY env var to point to it
+      - ${HOME}/.Xauthority:/tmp/.Xauthority:ro
     
     # Environment variables
     environment:
       # GUI support
       - DISPLAY=${DISPLAY:-:0}
+      # Point XAUTHORITY to the mounted file (if available)
+      - XAUTHORITY=/tmp/.Xauthority
       # Use NVIDIA GPU for rendering (CUDA 12.4)
       - __NV_PRIME_RENDER_OFFLOAD=1
       - __GLX_VENDOR_LIBRARY_NAME=nvidia

@@ -1,27 +1,34 @@
 #!/bin/bash
 
 # Script to download Matterport3D data using download_mp.py
-# This script is designed to run inside the dev container
-# Usage: ./download-mp3d.bash [SCENE_ID]
-# Example: ./download-mp3d.bash 17DRP5sb8fy
+# Run from project root directory (works both locally and in Docker)
+# Usage: ./scripts/data/download-mp3d.bash [SCENE_ID]
+# Example: ./scripts/data/download-mp3d.bash 17DRP5sb8fy
 
 set -e  # Exit on error
 
-# Data directory in container (mapped from VLMAPS_MP3D_DATA_DIR on host)
-DATA_DIR="/data/mp3d_data"
+# Get project root from script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Change to project root
+cd "$PROJECT_ROOT"
+
+# Data directories (relative to project root)
+DATA_DIR="$PROJECT_ROOT/data/mp3d"
+VLMAPS_DATA_DIR="$PROJECT_ROOT/data/vlmaps"
 
 # Check if download_mp.py exists
-if [ ! -f "/vlmaps/download_mp.py" ]; then
-    echo "Error: download_mp.py not found in /vlmaps" >&2
+if [ ! -f "$PROJECT_ROOT/download_mp.py" ]; then
+    echo "Error: download_mp.py not found in project root ($PROJECT_ROOT)" >&2
     echo "" >&2
     echo "Please copy the download_mp.py script provided by Matterport3D into the project root." >&2
-    echo "It will be available at /vlmaps/download_mp.py in the container." >&2
     exit 1
 fi
 
 # Function to update config file
 update_config_file() {
-    CONFIG_FILE="/vlmaps/config/data_paths/default.yaml"
+    CONFIG_FILE="$PROJECT_ROOT/config/data_paths/default.yaml"
     if [ ! -f "$CONFIG_FILE" ]; then
         echo "Warning: Config file not found at $CONFIG_FILE"
         echo "You may need to create it or update the path manually."
@@ -37,15 +44,16 @@ update_config_file() {
     read -p "Update config file? (yes/no): " update_config
     
     if [[ "$update_config" =~ ^[Yy][Ee][Ss]$ ]]; then
-        HABITAT_SCENE_DIR="$DATA_DIR/tasks/mp3d"
-        VLMAPS_DATA_DIR="$DATA_DIR/vlmaps_dataset"
+        # Use relative paths in config (works both locally and in Docker)
+        HABITAT_SCENE_DIR_CFG="data/mp3d/scans"
+        VLMAPS_DATA_DIR_CFG="data/vlmaps"
         
         # Backup original config
         cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
         
         # Update config file
-        sed -i "1s|.*|habitat_scene_dir: \"$HABITAT_SCENE_DIR\"|" "$CONFIG_FILE"
-        sed -i "2s|.*|vlmaps_data_dir: \"$VLMAPS_DATA_DIR\"|" "$CONFIG_FILE"
+        sed -i "1s|.*|habitat_scene_dir: \"$HABITAT_SCENE_DIR_CFG\"|" "$CONFIG_FILE"
+        sed -i "2s|.*|vlmaps_data_dir: \"$VLMAPS_DATA_DIR_CFG\"|" "$CONFIG_FILE"
         
         echo ""
         echo "Config file updated successfully!"
@@ -67,14 +75,14 @@ if [ -d "$DATA_DIR" ] && [ -n "$(ls -A "$DATA_DIR" 2>/dev/null)" ]; then
     echo "Options:" >&2
     echo "  1. Overwrite existing data (this will delete existing scans/ and tasks/ directories)" >&2
     echo "  2. Skip download and only update config" >&2
-    echo "  3. Change VLMAPS_MP3D_DATA_DIR to a different directory and restart the container" >&2
+    echo "  3. Exit and manage data directory manually" >&2
     echo "" >&2
     read -p "Do you want to overwrite existing data? (yes/no/skip): " response
     if [[ "$response" =~ ^[Ss][Kk][Ii][Pp]$ ]]; then
         SHOULD_DOWNLOAD=false
         echo "Skipping download. Will ask about config update..."
     elif [[ ! "$response" =~ ^[Yy][Ee][Ss]$ ]]; then
-        echo "Aborted. Please set VLMAPS_MP3D_DATA_DIR to a different directory and restart the container." >&2
+        echo "Aborted. Data will remain in $DATA_DIR" >&2
         # Still ask about config before exiting
         update_config_file
         exit 1
@@ -105,7 +113,6 @@ if [ "$SHOULD_DOWNLOAD" = true ]; then
     
     # Download scans
     echo "Downloading scans for scene $SCENE_ID..."
-    cd /vlmaps
     python download_mp.py -o "$DATA_DIR/scans" --id "$SCENE_ID" || {
         echo "Error: Failed to download scans" >&2
         exit 1
@@ -123,21 +130,21 @@ if [ "$SHOULD_DOWNLOAD" = true ]; then
         rm -rf "$DATA_DIR/tasks/v1"
     fi
     
-    # Create vlmaps_dataset directory for future use
-    mkdir -p "$DATA_DIR/vlmaps_dataset"
+    # Create vlmaps directory for future use
+    mkdir -p "$VLMAPS_DATA_DIR"
     
     echo ""
     echo "Download complete!"
-    echo "Data is available at: $DATA_DIR"
+    echo "Matterport3D data is available at: $DATA_DIR"
     echo ""
     echo "Directory structure:"
     echo "  $DATA_DIR/scans/         - Matterport3D scene scans"
     echo "  $DATA_DIR/tasks/         - Habitat tasks"
-    echo "  $DATA_DIR/vlmaps_dataset - VLMaps dataset (will be populated by generate_dataset.py)"
+    echo "  $VLMAPS_DATA_DIR/        - VLMaps dataset (will be populated by generate_dataset.py)"
 else
     echo "Skipping download. Using existing data at: $DATA_DIR"
-    # Ensure vlmaps_dataset directory exists even when skipping download
-    mkdir -p "$DATA_DIR/vlmaps_dataset"
+    # Ensure vlmaps directory exists even when skipping download
+    mkdir -p "$VLMAPS_DATA_DIR"
 fi
 
 # Always ask to update config file (regardless of whether data was downloaded)
