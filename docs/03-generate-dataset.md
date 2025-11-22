@@ -18,8 +18,8 @@ cat config/data_paths/default.yaml
 
 Should show:
 ```yaml
-habitat_scene_dir: "/data/mp3d_data/scans"
-vlmaps_data_dir: "/data/mp3d_data/tasks/mp3d"
+habitat_scene_dir: "data/mp3d/scans"
+vlmaps_data_dir: "data/vlmaps"
 ```
 
 ## Step 2: Configure Dataset Generation
@@ -82,7 +82,7 @@ python generate_dataset.py
 After generation, your data directory will look like:
 
 ```
-/data/mp3d_data/tasks/mp3d/
+data/mp3d/tasks/mp3d/
 ├── 5LpN3gDmAk7_1/
 │   ├── rgb/
 │   │   ├── 000000.png
@@ -183,13 +183,13 @@ After generation, verify the data:
 
 ```bash
 # Check a scene directory
-ls -la /data/mp3d_data/tasks/mp3d/5LpN3gDmAk7_1/
+ls -la data/mp3d/tasks/mp3d/5LpN3gDmAk7_1/
 
 # Should see:
 # rgb/, depth/, semantic/, poses.txt
 
 # Check number of frames
-ls /data/mp3d_data/tasks/mp3d/5LpN3gDmAk7_1/rgb/ | wc -l
+ls data/mp3d/tasks/mp3d/5LpN3gDmAk7_1/rgb/ | wc -l
 ```
 
 ## Next Steps

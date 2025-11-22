@@ -1,2 +1,2 @@
-habitat_scene_dir: '/data/mp3d_data/tasks/mp3d'
-vlmaps_data_dir: '/data/mp3d_data/vlmaps_dataset'
+habitat_scene_dir: 'data/mp3d/scans'
+vlmaps_data_dir: 'data/vlmaps'

@@ -1,9 +1,18 @@
 # 1. Setup
 
-This guide will help you set up the VLMaps development environment using Docker.
+This guide will help you set up the VLMaps development environment. You can choose between:
+- **Local Development** (recommended for Ubuntu 25.10): Set up a conda environment directly on your machine
+- **Docker**: Use a containerized environment (works on any system with Docker)
 
 ## Prerequisites
 
+### For Local Development:
+- **Ubuntu 25.10** (or compatible Linux distribution)
+- **NVIDIA GPU** with CUDA 12.4 support and driver 545+
+- **Conda** or **Miniconda** (will be installed automatically if not present)
+- **Git** installed
+
+### For Docker:
 - **Docker** and **Docker Compose** installed
 - **NVIDIA GPU** with CUDA support (recommended)
 - **Git** installed
@@ -15,47 +24,69 @@ git clone https://github.com/vlmaps/vlmaps.git
 cd vlmaps
 ```
 
-## Step 2: Set Up Matterport3D Data Directory
+## Step 2: Choose Your Setup Method
 
-Set the environment variable for where you want to store the Matterport3D dataset (~50GB). This directory will be mounted as a volume in the container.
+### Option A: Local Development (Ubuntu 25.10)
 
-### For Bash/Zsh:
+For local development on Ubuntu 25.10, use the automated setup script:
+
 ```bash
-export VLMAPS_MP3D_DATA_DIR=/path/to/your/data
+# Make the script executable (if not already)
+chmod +x scripts/setup/setup_local_dev.bash
+
+# Run the setup script
+./scripts/setup/setup_local_dev.bash
 ```
 
-### For Fish Shell:
-```fish
-set -x VLMAPS_MP3D_DATA_DIR /path/to/your/data
-```
+This script will:
+- Install Miniconda if not present
+- Create a conda environment with Python 3.9
+- Install system dependencies (OpenGL libraries, etc.)
+- Install PyTorch 2.5.0 with CUDA 12.4
+- Install habitat-sim and all other dependencies
+- Set up Hierarchical-Localization
 
-### For Permanent Setup (Bash/Zsh):
-Add to your `~/.bashrc` or `~/.zshrc`:
+After setup, activate the environment:
 ```bash
-export VLMAPS_MP3D_DATA_DIR=/path/to/your/data
+conda activate vlmaps
 ```
 
-### For Permanent Setup (Fish):
-Add to `~/.config/fish/config.fish`:
-```fish
-set -x VLMAPS_MP3D_DATA_DIR /path/to/your/data
-```
-
-### Using Docker Compose Projects (Recommended)
-
-Alternatively, create a `.env` file in the project root:
+To verify the installation:
 ```bash
-echo "VLMAPS_MP3D_DATA_DIR=/path/to/your/data" > .env
+# Check Python version (should be 3.9)
+python --version
+
+# Check PyTorch and CUDA
+python -c "import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda if torch.cuda.is_available() else \"N/A\"}')"
+
+# Check habitat-sim
+python -c "import habitat_sim; print('habitat-sim installed successfully')"
+
+# Check CLIP
+python -c "import clip; print('CLIP installed successfully')"
 ```
 
-Docker Compose will automatically read this file.
+**Note**: For local development, you can query images, use tooling, and check for build errors more easily than in Docker.
 
-## Step 3: Build and Start the Container
+### Option B: Docker Setup
+
+Continue with the Docker setup steps below.
+
+## Step 3: Data Directory
+
+The Matterport3D dataset (~50GB) will be stored in the `data/` directory within the project. This directory is:
+- Excluded from Docker builds (via `.dockerignore`)
+- Excluded from Git (via `.gitignore`)
+- Automatically mounted when using Docker
+
+No additional configuration needed - the data directory will be created automatically when you download the dataset.
+
+## Step 4: Build and Start the Container (Docker Only)
 
 Use the provided `start.bash` script:
 
 ```bash
-./start.bash
+./scripts/docker/start.bash
 ```
 
 Or manually with docker-compose:
@@ -71,7 +102,7 @@ The project provides a pre-built Docker image with all dependencies pre-installe
 
 ```bash
 # The docker-compose.yml automatically uses the pre-built image
-./start.bash
+./scripts/docker/start.bash
 ```
 
 The image is automatically pulled from GitHub Container Registry: `ghcr.io/robot-autonomy-vlmaps/vlmaps:latest`
@@ -83,23 +114,30 @@ If you want to build the image locally (e.g., for development or customization):
 ```bash
 # Set environment variable to force local build
 export VLMAPS_BUILD_LOCAL=true
-./start.bash
+./scripts/docker/start.bash
 
 # Or edit docker-compose.yml to comment out 'image:' and uncomment 'build:'
 ```
 
 **Note**: Building locally takes 30-45 minutes as it installs all dependencies including habitat-sim.
 
-## Step 4: Verify Installation
+## Step 5: Verify Installation
 
+### For Local Development:
+See verification steps in Option A above.
+
+### For Docker:
 All dependencies are pre-installed in the image, so you can skip `install.bash`. However, if you built locally or want to verify, check that everything is set up correctly:
 
 ```bash
 # Check conda environment
 conda info
 
-# Check Python version (should be 3.8)
+# Check Python version (should be 3.9)
 python --version
+
+# Check PyTorch and CUDA
+python -c "import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda if torch.cuda.is_available() else \"N/A\"}')"
 
 # Check if habitat-sim is installed
 python -c "import habitat_sim; print('habitat-sim installed successfully')"
@@ -108,13 +146,26 @@ python -c "import habitat_sim; print('habitat-sim installed successfully')"
 python -c "import torch; import clip; print('Dependencies OK')"
 ```
 
-**Note**: If you built the image locally and dependencies aren't installed, you can run `bash install.bash` inside the container. However, with the pre-built image, everything should already be installed.
+**Note**: If you built the image locally and dependencies aren't installed, you can run `bash scripts/setup/install.bash` inside the container. However, with the pre-built image, everything should already be installed.
+
+### Docker OpenGL Support
+
+The Docker image uses `nvidia/cuda` base image (not `cudagl`) with OpenGL libraries installed separately. For OpenGL rendering:
+
+1. **X11 Forwarding** (for GUI applications):
+   - The `docker-compose.yml` already configures X11 forwarding
+   - Ensure X11 is accessible: `xhost +local:docker` (if needed)
+   - The container mounts `/tmp/.X11-unix` and `.Xauthority` for display access
+
+2. **Headless Rendering** (for server environments):
+   - Use `xvfb` (X Virtual Framebuffer) which is pre-installed
+   - Run applications with: `xvfb-run -a <your-command>`
 
 ## Container Management
 
 ### Starting the Container
 ```bash
-./start.bash
+./scripts/docker/start.bash
 ```
 
 ### Stopping the Container

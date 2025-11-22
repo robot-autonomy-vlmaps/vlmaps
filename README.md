@@ -29,15 +29,38 @@ Try VLMaps creation and landmark indexing in [![Open In Colab](https://colab.res
 To begin on your own machine, clone this repository locally
 ```bash
 git clone https://github.com/vlmaps/vlmaps.git
+cd vlmaps
 ```
-Install requirements:
+
+### Option 1: Automated Local Setup (Ubuntu 25.10 - Recommended)
+
+For local development on Ubuntu 25.10, use the automated setup script:
 ```bash
-$ conda create -n vlmaps python=3.8 -y  # or use virtualenv
+./scripts/setup/setup_local_dev.bash
+```
+
+This will set up a conda environment with Python 3.9, PyTorch 2.5.0 (CUDA 12.4), and all dependencies.
+
+After setup, activate the environment:
+```bash
+conda activate vlmaps
+```
+
+### Option 2: Manual Setup
+
+For manual setup or other systems:
+```bash
+$ conda create -n vlmaps python=3.9 -y  # or use virtualenv
 $ conda activate vlmaps
 $ conda install jupyter -y
+$ conda install pytorch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 pytorch-cuda=12.4 -c pytorch -c nvidia
 $ cd vlmaps
-$ bash install.bash
+$ bash scripts/setup/install.bash
 ```
+
+### Option 3: Docker Setup
+
+See [docs/01-setup.md](docs/01-setup.md) for Docker-based setup instructions.
 
 ## Run Demo
 ```bash

@@ -89,7 +89,7 @@ This will:
 
 The map will be saved in the scene directory:
 ```
-/data/mp3d_data/tasks/mp3d/5LpN3gDmAk7_1/
+data/mp3d/tasks/mp3d/5LpN3gDmAk7_1/
 ├── rgb/
 ├── depth/
 ├── semantic/
@@ -244,7 +244,7 @@ Check that the map was created:
 
 ```bash
 # List scene directory
-ls -lh /data/mp3d_data/tasks/mp3d/5LpN3gDmAk7_1/
+ls -lh data/mp3d/tasks/mp3d/5LpN3gDmAk7_1/
 
 # Should see map.npz file
 ```

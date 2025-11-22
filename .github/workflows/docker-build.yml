@@ -3,15 +3,13 @@ name: Build and Publish Docker Image
 on:
   push:
     branches:
-      - master
-      - main
+      - release
     tags:
       - 'v*'
   pull_request:
     branches:
-      - master
-      - main
-  workflow_dispatch: # Allows manual triggering
+      - release
+  workflow_dispatch:  # Allow manual triggering
 
 env:
   REGISTRY: ghcr.io
@@ -48,16 +46,8 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=sha-,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Free disk space (GitHub Actions runners can run out of space)
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          df -h
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/release' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -70,3 +60,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+
+      - name: Image digest
+        run: echo ${{ steps.meta.outputs.digest }}
