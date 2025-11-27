@@ -7,7 +7,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: vlmaps-dev
     
     # Volume mounts
     volumes:
