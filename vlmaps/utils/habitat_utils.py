@@ -5,6 +5,7 @@ from scipy.spatial.transform import Rotation as R
 
 import cv2
 import habitat_sim
+import magnum as mn
 import numpy as np
 from PIL import Image
 
@@ -87,8 +88,13 @@ def make_sensor_spec(
     sensor_spec.sensor_type = sensor_type
     sensor_spec.resolution = [h, w]
     sensor_spec.position = position
-    if orientation:
-        sensor_spec.orientation = orientation
+    if orientation is not None:
+        orientation_vec = np.array(orientation, dtype=float).flatten()
+        if orientation_vec.size != 3:
+            raise ValueError(
+                f"Sensor orientation must have 3 values, got {orientation_vec}"
+            )
+        sensor_spec.orientation = mn.Vector3(*orientation_vec.tolist())
 
     sensor_spec.sensor_subtype = habitat_sim.SensorSubType.PINHOLE
     return sensor_spec
