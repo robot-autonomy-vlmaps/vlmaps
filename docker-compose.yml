@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   vlmaps:
     # Use pre-built image from GitHub Container Registry (faster)
@@ -25,11 +27,7 @@ services:
       TERM: ${TERM:-xterm-256color}
     
     # GPU support (CUDA 12.4)
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
+    runtime: nvidia
     
     # Network and IPC settings for low-latency GPU workloads
     network_mode: host
