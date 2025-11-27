@@ -15,26 +15,14 @@ services:
       - .:/vlmaps:cached
       # Preserve bash history
       - vlmaps-bash-history:/root/.bash_history
-      # GUI support (X11 forwarding)
-      # /tmp/.X11-unix is the X11 socket directory (usually accessible to all users)
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      # XAUTHORITY file contains X11 authentication cookie
-      # Mount to a writable location in container, use XAUTHORITY env var to point to it
-      - ${HOME}/.Xauthority:/tmp/.Xauthority:ro
     
     # Environment variables
     environment:
-      # GUI support
-      - DISPLAY=${DISPLAY:-:0}
-      # Point XAUTHORITY to the mounted file (if available)
-      - XAUTHORITY=/tmp/.Xauthority
-      # Use NVIDIA GPU for rendering (CUDA 12.4)
-      - __NV_PRIME_RENDER_OFFLOAD=1
-      - __GLX_VENDOR_LIBRARY_NAME=nvidia
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics,display
-      - NVIDIA_VISIBLE_DEVICES=all
-      - DEBIAN_FRONTEND=noninteractive
-      - TERM=${TERM:-xterm-256color}
+      # Headless EGL rendering
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility,graphics
+      NVIDIA_VISIBLE_DEVICES: all
+      DEBIAN_FRONTEND: noninteractive
+      TERM: ${TERM:-xterm-256color}
     
     # GPU support (CUDA 12.4)
     deploy:
@@ -43,7 +31,7 @@ services:
           devices:
             - capabilities: [gpu]
     
-    # Network and IPC settings for X11
+    # Network and IPC settings for low-latency GPU workloads
     network_mode: host
     ipc: host
     

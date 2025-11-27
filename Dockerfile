@@ -16,9 +16,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/conda/bin:$PATH \
     CONDA_AUTO_UPDATE_CONDA=false \
     PYTHONUNBUFFERED=1 \
-    TERM=xterm-256color
+    TERM=xterm-256color \
+    MAGNUM_DISABLE_X11_APPLICATION=1 \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
 
-# Install system dependencies including OpenGL libraries (installed separately since we use nvidia/cuda base)
+# Install system dependencies for headless EGL rendering (no X11 runtime)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
@@ -30,24 +32,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     libglfw3-dev \
     libglm-dev \
-    libx11-dev \
     libomp-dev \
     libegl1-mesa-dev \
     libgl1-mesa-glx \
     libgl1-mesa-dri \
     libglu1-mesa-dev \
-    libxext-dev \
-    libxrender-dev \
     pkg-config \
     wget \
     zip \
-    libxi-dev \
-    libxcursor-dev \
-    libxinerama-dev \
-    libxrandr-dev \
-    x11-apps \
-    x11-xserver-utils \
-    xvfb \
     unzip && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
