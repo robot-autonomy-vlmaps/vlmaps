@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   vlmaps:
     # Use pre-built image from GitHub Container Registry (faster)
@@ -21,13 +19,24 @@ services:
     # Environment variables
     environment:
       # Headless EGL rendering
-      NVIDIA_DRIVER_CAPABILITIES: compute,utility,graphics
+      NVIDIA_DRIVER_CAPABILITIES: gpu,compute,utility,graphics
       NVIDIA_VISIBLE_DEVICES: all
       DEBIAN_FRONTEND: noninteractive
       TERM: ${TERM:-xterm-256color}
     
     # GPU support (CUDA 12.4)
     runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities:
+                - gpu
+                - compute
+                - utility
+                - graphics
     
     # Network and IPC settings for low-latency GPU workloads
     network_mode: host
