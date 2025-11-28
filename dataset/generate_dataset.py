@@ -14,6 +14,41 @@ from tqdm import tqdm
 from vlmaps.utils.habitat_utils import get_obj2cls_dict, make_cfg, save_obs
 
 
+def _configure_headless_backend() -> None:
+    """Ensure Magnum/Habitat use a valid GPU in headless containers."""
+
+    os.environ.setdefault("MAGNUM_LOG", "quiet")
+    os.environ.setdefault("HABITAT_SIM_LOG", "quiet")
+
+    # Let users override via env, otherwise try all EGL devices so we don't get stuck on device 0.
+    if "MAGNUM_DEVICE" not in os.environ:
+        os.environ["MAGNUM_DEVICE"] = os.environ.get("VLMAPS_MAGNUM_DEVICE", "all")
+
+    # Allow overriding CUDA device explicitly; default to 0 if unset.
+    if "MAGNUM_CUDA_DEVICE" not in os.environ:
+        os.environ["MAGNUM_CUDA_DEVICE"] = os.environ.get("VLMAPS_MAGNUM_CUDA_DEVICE", "0")
+
+
+def _create_simulator(cfg: habitat_sim.Configuration) -> habitat_sim.Simulator:
+    """Create simulator with automatic fallback if Magnum can't pick an EGL device."""
+
+    try:
+        return habitat_sim.Simulator(cfg)
+    except RuntimeError as err:
+        msg = str(err)
+        needs_retry = (
+            "WindowlessEglApplication::tryCreateContext" in msg
+            or "WindowlessContext" in msg
+            or "unable to find CUDA device" in msg
+        )
+        already_all = os.environ.get("MAGNUM_DEVICE") == "all"
+        if needs_retry and not already_all:
+            print("[generate_dataset] Falling back to MAGNUM_DEVICE=all for EGL context selection.")
+            os.environ["MAGNUM_DEVICE"] = "all"
+            return habitat_sim.Simulator(cfg)
+        raise
+
+
 def generate_scene_data(save_dir: Union[Path, str], config: DictConfig, scene_path: Path, poses: np.ndarray) -> None:
     """
     config: config for the sensors of the collected data
@@ -36,7 +71,7 @@ def generate_scene_data(save_dir: Union[Path, str], config: DictConfig, scene_pa
         "seed": 42,
     }
     cfg = make_cfg(sim_setting)
-    sim = habitat_sim.Simulator(cfg)
+    sim = _create_simulator(cfg)
 
     # get the dict mapping object id to semantic id in this scene
     obj2cls = get_obj2cls_dict(sim)
@@ -62,8 +97,7 @@ def generate_scene_data(save_dir: Union[Path, str], config: DictConfig, scene_pa
     config_name="generate_dataset.yaml",
 )
 def main(config: DictConfig) -> None:
-    os.environ["MAGNUM_LOG"] = "quiet"
-    os.environ["HABITAT_SIM_LOG"] = "quiet"
+    _configure_headless_backend()
     os.makedirs(config.data_paths.vlmaps_data_dir, exist_ok=True)
     dataset_dir = Path(config.data_paths.vlmaps_data_dir)
     os.makedirs(dataset_dir, exist_ok=True)
