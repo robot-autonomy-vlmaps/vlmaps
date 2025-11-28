@@ -1,3 +1,11 @@
+from __future__ import annotations
+
+import os
+from datetime import datetime
+from pathlib import Path
+import uuid
+from typing import Optional
+
 import numpy as np
 import open3d as o3d
 import cv2
@@ -5,13 +13,58 @@ from tqdm import tqdm
 from scipy.ndimage import distance_transform_edt
 
 
-def visualize_rgb_map_3d(pc: np.ndarray, rgb: np.ndarray):
-    grid_rgb = rgb / 255.0
+DEFAULT_RENDER_WIDTH = int(os.environ.get("VLMAPS_RENDER_WIDTH", 1280))
+DEFAULT_RENDER_HEIGHT = int(os.environ.get("VLMAPS_RENDER_HEIGHT", 720))
+DEFAULT_RENDER_DIR = Path(os.environ.get("VLMAPS_RENDER_DIR", "/tmp/vlmaps_renders"))
+
+
+def _render_point_cloud_offscreen(
+    pc: np.ndarray, colors: np.ndarray, file_prefix: str, background: Optional[np.ndarray] = None
+) -> Optional[Path]:
+    if pc.size == 0 or colors.size == 0:
+        print("[OffscreenRenderer] Point cloud is empty, skipping render.")
+        return None
+
+    DEFAULT_RENDER_DIR.mkdir(parents=True, exist_ok=True)
 
     pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(pc)
-    pcd.colors = o3d.utility.Vector3dVector(grid_rgb)
-    o3d.visualization.draw_geometries([pcd])
+    pcd.points = o3d.utility.Vector3dVector(pc.astype(np.float32))
+    pcd.colors = o3d.utility.Vector3dVector(colors.astype(np.float32))
+
+    renderer = o3d.visualization.rendering.OffscreenRenderer(DEFAULT_RENDER_WIDTH, DEFAULT_RENDER_HEIGHT)
+    if background is None:
+        background = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+    renderer.scene.set_background(background.tolist())
+
+    material = o3d.visualization.rendering.MaterialRecord()
+    material.shader = "defaultUnlit"
+    geom_name = f"pcd_{uuid.uuid4().hex}"
+    renderer.scene.add_geometry(geom_name, pcd, material)
+
+    bbox = pcd.get_axis_aligned_bounding_box()
+    center = bbox.get_center()
+    extent = bbox.get_extent()
+    radius = np.linalg.norm(extent)
+    if radius < 1e-3:
+        radius = 1.0
+    eye = center + np.array([radius, radius, radius])
+    up = np.array([0.0, 0.0, 1.0])
+    renderer.setup_camera(60.0, center, eye, up)
+
+    image = renderer.render_to_image()
+    renderer.release_resources()
+    del renderer
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    output_path = DEFAULT_RENDER_DIR / f"{file_prefix}_{timestamp}.png"
+    o3d.io.write_image(str(output_path), image)
+    print(f"[OffscreenRenderer] Saved visualization to {output_path}")
+    return output_path
+
+
+def visualize_rgb_map_3d(pc: np.ndarray, rgb: np.ndarray) -> Optional[Path]:
+    grid_rgb = (rgb / 255.0).astype(np.float32)
+    return _render_point_cloud_offscreen(pc, grid_rgb, "rgb_map_3d")
 
 
 def get_heatmap_from_mask_3d(
@@ -42,12 +95,16 @@ def visualize_masked_map_3d(pc: np.ndarray, mask: np.ndarray, rgb: np.ndarray, t
     visualize_heatmap_3d(pc, heatmap, rgb, transparency)
 
 
-def visualize_heatmap_3d(pc: np.ndarray, heatmap: np.ndarray, rgb: np.ndarray, transparency: float = 0.5):
+def visualize_heatmap_3d(
+    pc: np.ndarray, heatmap: np.ndarray, rgb: np.ndarray, transparency: float = 0.5
+) -> Optional[Path]:
     sim_new = (heatmap * 255).astype(np.uint8)
+    if sim_new.ndim == 1:
+        sim_new = sim_new.reshape(-1, 1)
     heat = cv2.applyColorMap(sim_new, cv2.COLORMAP_JET)
     heat = heat.reshape(-1, 3)[:, ::-1].astype(np.float32)
     heat_rgb = heat * transparency + rgb * (1 - transparency)
-    visualize_rgb_map_3d(pc, heat_rgb)
+    return visualize_rgb_map_3d(pc, heat_rgb)
 
 
 def pool_3d_label_to_2d(mask_3d: np.ndarray, grid_pos: np.ndarray, gs: int) -> np.ndarray:
