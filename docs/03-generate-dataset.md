@@ -18,8 +18,8 @@ cat config/data_paths/default.yaml
 
 Should show:
 ```yaml
-habitat_scene_dir: "/data/mp3d_data/scans"
-vlmaps_data_dir: "/data/mp3d_data/tasks/mp3d"
+habitat_scene_dir: "data/mp3d/scans"
+vlmaps_data_dir: "data/mp3d/tasks/mp3d"
 ```
 
 ## Step 2: Configure Dataset Generation
@@ -64,7 +64,7 @@ nano config/generate_dataset.yaml
 Run the dataset generation script:
 
 ```bash
-cd dataset
+cd application/dataset
 python generate_dataset.py
 ```
 
@@ -79,10 +79,10 @@ python generate_dataset.py
 
 ### Expected Output Structure
 
-After generation, your data directory will look like:
+After generation, your data directory (under the project root) will look like:
 
 ```
-/data/mp3d_data/tasks/mp3d/
+./data/mp3d/tasks/mp3d/
 ├── 5LpN3gDmAk7_1/
 │   ├── rgb/
 │   │   ├── 000000.png
@@ -150,7 +150,7 @@ data_cfg:
 If you want to collect your own data in Habitat-Sim:
 
 ```bash
-python dataset/collect_custom_dataset.py scene_names=["gTV8FGcVJC9"]
+python application/dataset/collect_custom_dataset.py scene_names=["gTV8FGcVJC9"]
 ```
 
 This will create a new folder `<scene_name>_<id>` under `vlmaps_data_dir`. The `<id>` is automatically incremented if folders already exist.
@@ -182,14 +182,14 @@ This will create a new folder `<scene_name>_<id>` under `vlmaps_data_dir`. The `
 After generation, verify the data:
 
 ```bash
-# Check a scene directory
-ls -la /data/mp3d_data/tasks/mp3d/5LpN3gDmAk7_1/
+# Check a scene directory (run from project root)
+ls -la ./data/mp3d/tasks/mp3d/5LpN3gDmAk7_1/
 
 # Should see:
 # rgb/, depth/, semantic/, poses.txt
 
 # Check number of frames
-ls /data/mp3d_data/tasks/mp3d/5LpN3gDmAk7_1/rgb/ | wc -l
+ls ./data/mp3d/tasks/mp3d/5LpN3gDmAk7_1/rgb/ | wc -l
 ```
 
 ## Next Steps

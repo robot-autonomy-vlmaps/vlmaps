@@ -1,144 +1,58 @@
 #!/bin/bash
 
-# Script to download Matterport3D data using download_mp.py
-# This script is designed to run inside the dev container
-# Usage: ./scripts/download-mp3d.bash [SCENE_ID]
-# Example: ./scripts/download-mp3d.bash 17DRP5sb8fy
+set -euo pipefail
 
-set -e  # Exit on error
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ZIP_PATH="$PROJECT_ROOT/data/mp3d_habitat.zip"
+TARGET_DIR="$PROJECT_ROOT/data/mp3d"
+TEMP_V1_DIR="$PROJECT_ROOT/data/v1"
 
-# Data directory in container (mapped from VLMAPS_MP3D_DATA_DIR on host)
-DATA_DIR="/data/mp3d_data"
+log() {
+    printf '[download-mp3d] %s\n' "$1"
+}
 
-# Check if download_mp.py exists
-if [ ! -f "/vlmaps/download_mp.py" ]; then
-    echo "Error: download_mp.py not found in /vlmaps" >&2
-    echo "" >&2
-    echo "Please copy the download_mp.py script provided by Matterport3D into the project root." >&2
-    echo "It will be available at /vlmaps/download_mp.py in the container." >&2
+if [ ! -f "$PROJECT_ROOT/download_mp.py" ]; then
+    echo "Error: download_mp.py not found in $PROJECT_ROOT." >&2
+    echo "Place the Matterport-provided downloader in the project root." >&2
     exit 1
 fi
 
-# Function to update config file
-update_config_file() {
-    CONFIG_FILE="/vlmaps/config/data_paths/default.yaml"
-    if [ ! -f "$CONFIG_FILE" ]; then
-        echo "Warning: Config file not found at $CONFIG_FILE"
-        echo "You may need to create it or update the path manually."
+mkdir -p "$PROJECT_ROOT/data"
+
+download_zip() {
+    if [ -f "$ZIP_PATH" ]; then
+        log "Found existing mp3d_habitat.zip; skipping download."
         return
     fi
-    
-    echo ""
-    echo "Would you like to update config/data_paths/default.yaml to point to the data directory?"
-    echo ""
-    echo "Current config:"
-    cat "$CONFIG_FILE"
-    echo ""
-    read -p "Update config file? (yes/no): " update_config
-    
-    if [[ "$update_config" =~ ^[Yy][Ee][Ss]$ ]]; then
-        HABITAT_SCENE_DIR="$DATA_DIR/tasks/mp3d"
-        VLMAPS_DATA_DIR="$DATA_DIR/vlmaps_dataset"
-        
-        # Backup original config
-        cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
-        
-        # Update config file
-        sed -i "1s|.*|habitat_scene_dir: \"$HABITAT_SCENE_DIR\"|" "$CONFIG_FILE"
-        sed -i "2s|.*|vlmaps_data_dir: \"$VLMAPS_DATA_DIR\"|" "$CONFIG_FILE"
-        
-        echo ""
-        echo "Config file updated successfully!"
-        echo "Backup saved to: ${CONFIG_FILE}.bak"
-        echo ""
-        echo "New config:"
-        cat "$CONFIG_FILE"
-    else
-        echo "Config file not updated. You can update it manually later."
+
+    log "Downloading Habitat task bundle (mp3d_habitat.zip). This is ~15GB."
+    python download_mp.py -o "$PROJECT_ROOT/data" --task_data habitat
+
+    local legacy_zip="$TEMP_V1_DIR/tasks/mp3d_habitat.zip"
+    if [ -f "$legacy_zip" ]; then
+        mv "$legacy_zip" "$ZIP_PATH"
+        rm -rf "$TEMP_V1_DIR"
+    fi
+
+    if [ ! -f "$ZIP_PATH" ]; then
+        echo "Download finished but $ZIP_PATH not found." >&2
+        exit 1
     fi
 }
 
-# Check if data directory exists and has content
-OVERWRITE=false
-SHOULD_DOWNLOAD=true
-if [ -d "$DATA_DIR" ] && [ -n "$(ls -A "$DATA_DIR" 2>/dev/null)" ]; then
-    echo "Warning: Data directory already exists and contains files: $DATA_DIR" >&2
-    echo "" >&2
-    echo "Options:" >&2
-    echo "  1. Overwrite existing data (this will delete existing scans/ and tasks/ directories)" >&2
-    echo "  2. Skip download and only update config" >&2
-    echo "  3. Change VLMAPS_MP3D_DATA_DIR to a different directory and restart the container" >&2
-    echo "" >&2
-    read -p "Do you want to overwrite existing data? (yes/no/skip): " response
-    if [[ "$response" =~ ^[Ss][Kk][Ii][Pp]$ ]]; then
-        SHOULD_DOWNLOAD=false
-        echo "Skipping download. Will ask about config update..."
-    elif [[ ! "$response" =~ ^[Yy][Ee][Ss]$ ]]; then
-        echo "Aborted. Please set VLMAPS_MP3D_DATA_DIR to a different directory and restart the container." >&2
-        # Still ask about config before exiting
-        update_config_file
-        exit 1
-    else
-        OVERWRITE=true
-        echo "Proceeding with overwrite..."
-    fi
-fi
+extract_zip() {
+    rm -rf "$TARGET_DIR"
+    log "Extracting into $TARGET_DIR"
+    unzip -oq "$ZIP_PATH" -d "$PROJECT_ROOT/data"
 
-# Download data if needed
-if [ "$SHOULD_DOWNLOAD" = true ]; then
-    # Create data directory if it doesn't exist
-    mkdir -p "$DATA_DIR"
-    
-    # Clear existing scans and tasks directories if overwriting
-    if [ "$OVERWRITE" = true ]; then
-        echo "Clearing existing data directories..."
-        rm -rf "$DATA_DIR/scans" "$DATA_DIR/tasks"
-    fi
-    
-    # Get scene ID from argument or use default
-    SCENE_ID="${1:-17DRP5sb8fy}"
-    echo "Using scene ID: $SCENE_ID"
-    
-    echo "Downloading Matterport3D data to: $DATA_DIR"
-    echo "This may take a while (approximately 50GB)..."
-    echo ""
-    
-    # Download scans
-    echo "Downloading scans for scene $SCENE_ID..."
-    cd /vlmaps
-    python download_mp.py -o "$DATA_DIR/scans" --id "$SCENE_ID" || {
-        echo "Error: Failed to download scans" >&2
+    if [ ! -d "$TARGET_DIR" ]; then
+        echo "Extraction failed: expected $TARGET_DIR." >&2
         exit 1
-    }
-    if [ -d "$DATA_DIR/scans/v1/scans/$SCENE_ID" ]; then
-        cp -a "$DATA_DIR/scans/v1/scans/$SCENE_ID/." "$DATA_DIR/scans/" && \
-        rm -rf "$DATA_DIR/scans/v1"
     fi
-    
-    # Download tasks
-    echo "Downloading habitat tasks..."
-    python download_mp.py -o "$DATA_DIR/tasks" --task habitat
-    if [ -f "$DATA_DIR/tasks/v1/tasks/mp3d_habitat.zip" ]; then
-        unzip -q "$DATA_DIR/tasks/v1/tasks/mp3d_habitat.zip" -d "$DATA_DIR/tasks" && \
-        rm -rf "$DATA_DIR/tasks/v1"
-    fi
-    
-    # Create vlmaps_dataset directory for future use
-    mkdir -p "$DATA_DIR/vlmaps_dataset"
-    
-    echo ""
-    echo "Download complete!"
-    echo "Data is available at: $DATA_DIR"
-    echo ""
-    echo "Directory structure:"
-    echo "  $DATA_DIR/scans/         - Matterport3D scene scans"
-    echo "  $DATA_DIR/tasks/         - Habitat tasks"
-    echo "  $DATA_DIR/vlmaps_dataset - VLMaps dataset (will be populated by generate_dataset.py)"
-else
-    echo "Skipping download. Using existing data at: $DATA_DIR"
-    # Ensure vlmaps_dataset directory exists even when skipping download
-    mkdir -p "$DATA_DIR/vlmaps_dataset"
-fi
+}
 
-# Always ask to update config file (regardless of whether data was downloaded)
-update_config_file
+download_zip
+extract_zip
+
+log "Done. Scenes extracted under $TARGET_DIR and archive stored at $ZIP_PATH."
