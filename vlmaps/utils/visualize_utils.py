@@ -3,6 +3,7 @@ import logging
 
 import numpy as np
 import open3d as o3d
+from open3d.visualization import rendering
 import cv2
 from tqdm import tqdm
 from scipy.ndimage import distance_transform_edt
@@ -18,13 +19,23 @@ def _ensure_parent(path: Path) -> None:
 def _render_pcd_offscreen(pcd: o3d.geometry.PointCloud, output_path: Path) -> None:
     logger.debug("Rendering point cloud offscreen to %s", output_path)
     _ensure_parent(output_path)
-    vis = o3d.visualization.Visualizer()
-    vis.create_window(visible=False)
-    vis.add_geometry(pcd)
-    vis.poll_events()
-    vis.update_renderer()
-    vis.capture_screen_image(str(output_path), do_render=True)
-    vis.destroy_window()
+    # Use OffscreenRenderer to avoid GLFW/X11
+    bbox = pcd.get_axis_aligned_bounding_box()
+    extent = bbox.get_extent()
+    diag = max(extent[0], extent[1], extent[2])
+    # heuristics for camera distance and image size
+    img_size = 800
+    renderer = rendering.OffscreenRenderer(img_size, img_size)
+    mat = rendering.MaterialRecord()
+    mat.shader = "defaultUnlit"
+    renderer.scene.add_geometry("pcd", pcd, mat)
+    center = bbox.get_center()
+    eye = center + diag * 1.5 * np.array([1, 1, 1])
+    up = [0, 0, 1]
+    renderer.setup_camera(60, center, eye, up)
+    renderer.scene.scene.enable_sun_light(True)
+    img = renderer.render_to_image()
+    o3d.io.write_image(str(output_path), img)
     logger.info("Saved 3D visualization to %s", output_path)
 
 
