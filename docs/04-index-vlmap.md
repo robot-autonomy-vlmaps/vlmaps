@@ -87,9 +87,9 @@ This will:
 
 ### Expected Output
 
-The map will be saved in the scene directory:
+The map will be saved in the scene directory (under project root):
 ```
-/data/mp3d_data/tasks/mp3d/5LpN3gDmAk7_1/
+./data/mp3d/tasks/mp3d/5LpN3gDmAk7_1/
 ├── rgb/
 ├── depth/
 ├── semantic/
@@ -243,8 +243,8 @@ depth_sample_rate: 4  # Sample 1/4 of pixels (faster, sparser)
 Check that the map was created:
 
 ```bash
-# List scene directory
-ls -lh /data/mp3d_data/tasks/mp3d/5LpN3gDmAk7_1/
+# List scene directory (run from project root)
+ls -lh ./data/mp3d/tasks/mp3d/5LpN3gDmAk7_1/
 
 # Should see map.npz file
 ```

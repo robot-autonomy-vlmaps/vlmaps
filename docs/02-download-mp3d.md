@@ -22,25 +22,13 @@ This guide will help you download the Matterport3D dataset required for VLMaps.
 cp /path/to/downloaded/script.py download_mp.py
 ```
 
-## Step 2: Verify VLMAPS_MP3D_DATA_DIR is Set
-
-Ensure the environment variable is set (from Setup step):
-
-```bash
-# Check if it's set
-echo $VLMAPS_MP3D_DATA_DIR
-
-# If not set, set it (see Setup guide)
-export VLMAPS_MP3D_DATA_DIR=/path/to/your/data
-```
-
-## Step 3: Start the Container
+## Step 2: Start the Container
 
 ```bash
 ./scripts/start.bash
 ```
 
-## Step 4: Run the Download Script
+## Step 3: Run the Download Script
 
 Inside the container, run the download script:
 
@@ -57,39 +45,24 @@ Or with a specific scene ID:
 ### What the Script Does
 
 1. **Checks for download_mp.py** - Verifies the script exists
-2. **Checks data directory** - Warns if data already exists
-3. **Downloads scans** - Downloads scene data for the specified scene ID
-4. **Downloads tasks** - Downloads habitat task data
-5. **Organizes data** - Structures data into `scans/` and `tasks/` directories
-6. **Updates config** - Prompts to update `config/data_paths/default.yaml`
+2. **Creates data directory** - Ensures `data/` is available
+3. **Downloads habitat bundle** - Fetches `mp3d_habitat.zip` (~15GB) into `data/`
+4. **Extracts data** - Unzips into `data/mp3d/` with `scans/` and `tasks/`
 
-### Script Options
+## Step 4: Update Configuration
 
-When data already exists, you'll be prompted:
-- **yes** - Overwrite existing data
-- **skip** - Skip download and only update config
-- **no** - Abort (still prompts for config update)
-
-## Step 5: Update Configuration
-
-The script will ask if you want to update the config file. If you choose **yes**, it will automatically update:
-
-- `config/data_paths/default.yaml`
-
-The config will be updated to:
+If you need to point configs to the downloaded data (from the project root), set paths like:
 ```yaml
-habitat_scene_dir: "/data/mp3d_data/scans"
-vlmaps_data_dir: "/data/mp3d_data/tasks/mp3d"
+habitat_scene_dir: "data/mp3d/scans"
+vlmaps_data_dir: "data/mp3d/tasks/mp3d"
 ```
-
-A backup of the original config will be saved as `config/data_paths/default.yaml.bak`.
 
 ## Data Structure
 
-After download, your data directory will have this structure:
+After download, your data directory (under the project root) will have this structure:
 
 ```
-/data/mp3d_data/
+./data/mp3d/
 ├── scans/
 │   └── 17DRP5sb8fy/          # Scene directory
 │       ├── 17DRP5sb8fy.glb
@@ -110,10 +83,6 @@ After download, your data directory will have this structure:
 - Ensure the script is in the project root (visible at `/vlmaps/download_mp.py` in container)
 - Check file permissions: `chmod +x download_mp.py` (if needed)
 
-### VLMAPS_MP3D_DATA_DIR not set
-- Set it before starting the container: `export VLMAPS_MP3D_DATA_DIR=/path/to/data`
-- Or create a `.env` file in the project root
-
 ### Download fails
 - Check internet connection
 - Verify Matterport3D credentials are correct in `download_mp.py`
@@ -132,10 +101,10 @@ If you need to manually update the config:
 nano /vlmaps/config/data_paths/default.yaml
 ```
 
-Set:
+Set (relative to the project root):
 ```yaml
-habitat_scene_dir: "/data/mp3d_data/scans"
-vlmaps_data_dir: "/data/mp3d_data/tasks/mp3d"
+habitat_scene_dir: "data/mp3d/scans"
+vlmaps_data_dir: "data/mp3d/tasks/mp3d"
 ```
 
 ## Next Steps

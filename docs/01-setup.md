@@ -15,40 +15,9 @@ git clone https://github.com/vlmaps/vlmaps.git
 cd vlmaps
 ```
 
-## Step 2: Set Up Matterport3D Data Directory
+## Step 2: Prepare the Data Directory
 
-Set the environment variable for where you want to store the Matterport3D dataset (~50GB). This directory will be mounted as a volume in the container.
-
-### For Bash/Zsh:
-```bash
-export VLMAPS_MP3D_DATA_DIR=/path/to/your/data
-```
-
-### For Fish Shell:
-```fish
-set -x VLMAPS_MP3D_DATA_DIR /path/to/your/data
-```
-
-### For Permanent Setup (Bash/Zsh):
-Add to your `~/.bashrc` or `~/.zshrc`:
-```bash
-export VLMAPS_MP3D_DATA_DIR=/path/to/your/data
-```
-
-### For Permanent Setup (Fish):
-Add to `~/.config/fish/config.fish`:
-```fish
-set -x VLMAPS_MP3D_DATA_DIR /path/to/your/data
-```
-
-### Using Docker Compose Projects (Recommended)
-
-Alternatively, create a `.env` file in the project root:
-```bash
-echo "VLMAPS_MP3D_DATA_DIR=/path/to/your/data" > .env
-```
-
-Docker Compose will automatically read this file.
+Dataset files now live inside the repository under `data/`. The download script will create and populate this folder for you, so no environment variables or extra mounts are required. Ensure you have ~50GB free in the repo location.
 
 ## Step 3: Build and Start the Container
 

@@ -20,10 +20,8 @@ services:
     
     # Volume mounts
     volumes:
-      # Mount project files (current directory) to /vlmaps in container
+      # Mount project files (current directory) to /vlmaps in container (includes ./data)
       - .:/vlmaps
-      # Mount Matterport3D data directory (must be set via VLMAPS_MP3D_DATA_DIR env var)
-      - ${VLMAPS_MP3D_DATA_DIR}:/data/mp3d_data
       # Preserve bash history
       - vlmaps-bash-history:/root/.bash_history
       # X11 forwarding
