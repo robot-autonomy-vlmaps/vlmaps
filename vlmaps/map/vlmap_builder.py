@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union, Set
+import logging
 
 from tqdm import tqdm
 import cv2
@@ -25,8 +26,11 @@ from vlmaps.utils.mapping_utils import (
 )
 from vlmaps.lseg.modules.models.lseg_net import LSegEncNet
 
+logger = logging.getLogger(__name__)
+
 
 def visualize_pc(pc: np.ndarray):
+    logger.debug("visualize_pc with %d points", len(pc))
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(pc)
     o3d.visualization.draw_geometries([pcd])
@@ -56,14 +60,14 @@ class VLMapBuilder:
         """
         build the 3D map centering at the first base frame
         """
-        print("[create_map] [builder] init mobile_base map build")
+        logger.info("init mobile_base map build")
         # access config info
         camera_height = self.map_config.pose_info.camera_height
         cs = self.map_config.cell_size
         gs = self.map_config.grid_size
         depth_sample_rate = self.map_config.depth_sample_rate
 
-        print(f"[create_map] [builder] loading poses from {self.pose_path}")
+        logger.info("loading poses from %s", self.pose_path)
         self.base_poses = np.loadtxt(self.pose_path)
         if self.rot_type == "quat":
             self.init_base_tf = cvt_pose_vec2tf(self.base_poses[0])
@@ -79,14 +83,14 @@ class VLMapBuilder:
         self.map_save_dir = self.data_dir / "vlmap"
         os.makedirs(self.map_save_dir, exist_ok=True)
         self.map_save_path = self.map_save_dir / "vlmaps.h5df"
-        print(f"[create_map] [builder] map will be saved to {self.map_save_path}")
+        logger.info("map will be saved to %s", self.map_save_path)
 
         # init lseg model
-        print("[create_map] [builder] initializing LSeg model/checkpoint")
+        logger.info("initializing LSeg model/checkpoint")
         lseg_model, lseg_transform, crop_size, base_size, norm_mean, norm_std = self._init_lseg()
 
         # init the map
-        print("[create_map] [builder] initializing voxel grid")
+        logger.info("initializing voxel grid")
         (
             vh,
             grid_feat,
@@ -106,7 +110,7 @@ class VLMapBuilder:
         pbar = tqdm(zip(self.rgb_paths, self.depth_paths, self.base_poses), total=len(self.rgb_paths))
         for frame_i, (rgb_path, depth_path, base_posevec) in enumerate(pbar):
             if frame_i == 0:
-                print(f"[create_map] [builder] processing {len(self.rgb_paths)} frames...")
+                logger.info("processing %d frames...", len(self.rgb_paths))
             # load data
             if self.rot_type == "quat":
                 habitat_base_pose = cvt_pose_vec2tf(base_posevec)
@@ -191,11 +195,11 @@ class VLMapBuilder:
 
             mapped_iter_set.add(frame_i)
             if frame_i % 100 == 99:
-                print(f"[create_map] [builder] checkpoint: {max_id} voxels saved at frame {frame_i}")
+                logger.info("checkpoint: %d voxels saved at frame %d", max_id, frame_i)
                 self._save_3d_map(grid_feat, grid_pos, weight, grid_rgb, occupied_ids, mapped_iter_set, max_id)
 
         self._save_3d_map(grid_feat, grid_pos, weight, grid_rgb, occupied_ids, mapped_iter_set, max_id)
-        print(f"[create_map] [builder] final map saved with {max_id} voxels")
+        logger.info("final map saved with %d voxels", max_id)
 
     def create_camera_map(self):
         """
@@ -203,6 +207,7 @@ class VLMapBuilder:
         build the 3D map centering at the first camera frame. We require that the camera is initialized
         horizontally (the optical axis is parallel to the floor at the first frame).
         """
+        logger.warning("create_camera_map not implemented")
         return NotImplementedError
 
     def _init_map(self, map_height: float, cs: float, gs: int, map_path: Path) -> Tuple:
@@ -210,6 +215,9 @@ class VLMapBuilder:
         initialize a voxel grid of size (gs, gs, vh), vh = map_height / cs, each voxel is of
         size cs
         """
+        logger.info(
+            "initializing map arrays vh=map_height/cs=%s cs=%s gs=%s path=%s", map_height / cs, cs, gs, map_path
+        )
         # init the map related variables
         vh = int(map_height / cs)
         grid_feat = np.zeros((gs * gs, self.clip_feat_dim), dtype=np.float32)
@@ -223,6 +231,7 @@ class VLMapBuilder:
 
         # check if there is already saved map
         if os.path.exists(map_path):
+            logger.info("existing map found at %s, loading for resume", map_path)
             (
                 mapped_iter_list,
                 grid_feat,
@@ -233,25 +242,30 @@ class VLMapBuilder:
             ) = load_3d_map(self.map_save_path)
             mapped_iter_set = set(mapped_iter_list)
             max_id = grid_feat.shape[0]
+            logger.info("resumed map with %d voxels and %d mapped iters", max_id, len(mapped_iter_set))
+        else:
+            logger.info("no existing map found, starting fresh")
 
         return vh, grid_feat, grid_pos, weight, occupied_ids, grid_rgb, mapped_iter_set, max_id
 
     def _init_lseg(self):
         crop_size = 480  # 480
         base_size = 520  # 520
+        logger.info("initializing LSeg model (crop_size=%d, base_size=%d)", crop_size, base_size)
         if torch.cuda.is_available():
             self.device = "cuda"
         elif torch.backends.mps.is_available():
             self.device = "mps"
         else:
             self.device = "cpu"
+        logger.info("using device: %s", self.device)
         lseg_model = LSegEncNet("", arch_option=0, block_depth=0, activation="lrelu", crop_size=crop_size)
         model_state_dict = lseg_model.state_dict()
         checkpoint_dir = Path(__file__).resolve().parents[1] / "lseg" / "checkpoints"
         checkpoint_path = checkpoint_dir / "demo_e200.ckpt"
         os.makedirs(checkpoint_dir, exist_ok=True)
         if not checkpoint_path.exists():
-            print("Downloading LSeg checkpoint...")
+            logger.info("Downloading LSeg checkpoint to %s", checkpoint_path)
             # the checkpoint is from official LSeg github repo
             # https://github.com/isl-org/lang-seg
             checkpoint_url = "https://drive.google.com/u/0/uc?id=1ayk6NXURI_vIPlym16f_RG3ffxBWHxvb"
@@ -284,6 +298,13 @@ class VLMapBuilder:
         min_depth: float = 0.1,
         max_depth: float = 10,
     ) -> np.ndarray:
+        logger.debug(
+            "backproject_depth depth_shape=%s sample_rate=%s min_depth=%s max_depth=%s",
+            depth.shape,
+            depth_sample_rate,
+            min_depth,
+            max_depth,
+        )
         pc, mask = depth2pc(depth, intr_mat=calib_mat, min_depth=min_depth, max_depth=max_depth)  # (3, N)
         shuffle_mask = np.arange(pc.shape[1])
         np.random.shuffle(shuffle_mask)
@@ -291,14 +312,19 @@ class VLMapBuilder:
         mask = mask[shuffle_mask]
         pc = pc[:, shuffle_mask]
         pc = pc[:, mask]
+        logger.debug("backproject_depth returned %d points", pc.shape[1])
         return pc
 
     def _out_of_range(self, row: int, col: int, height: int, gs: int, vh: int) -> bool:
+        out = col >= gs or row >= gs or height >= vh or col < 0 or row < 0 or height < 0
+        if out:
+            logger.debug("point out of range row=%s col=%s height=%s gs=%s vh=%s", row, col, height, gs, vh)
         return col >= gs or row >= gs or height >= vh or col < 0 or row < 0 or height < 0
 
     def _reserve_map_space(
         self, grid_feat: np.ndarray, grid_pos: np.ndarray, weight: np.ndarray, grid_rgb: np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        logger.info("reserving additional map space (doubling arrays from %d)", grid_feat.shape[0])
         grid_feat = np.concatenate(
             [
                 grid_feat,
@@ -333,6 +359,12 @@ class VLMapBuilder:
         mapped_iter_set: Set,
         max_id: int,
     ) -> None:
+        logger.debug(
+            "saving 3D map to %s voxels=%d mapped_iters=%d",
+            self.map_save_path,
+            max_id,
+            len(mapped_iter_set),
+        )
         grid_feat = grid_feat[:max_id]
         grid_pos = grid_pos[:max_id]
         weight = weight[:max_id]

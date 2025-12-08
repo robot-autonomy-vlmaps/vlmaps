@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
+import logging
 import gdown
 
 from tqdm import tqdm
@@ -34,6 +35,8 @@ from vlmaps.map.map import Map
 from vlmaps.utils.index_utils import find_similar_category_id, get_segment_islands_pos, get_dynamic_obstacles_map_3d
 from vlmaps.utils.clip_utils import get_lseg_score
 
+logger = logging.getLogger(__name__)
+
 
 class VLMap(Map):
     def __init__(self, map_config: DictConfig, data_dir: str = ""):
@@ -42,10 +45,10 @@ class VLMap(Map):
         self.categories = None
 
     def create_map(self, data_dir: Union[Path, str]) -> None:
-        print(f"[create_map] Starting map creation for scene at: {data_dir}")
+        logger.info("Starting map creation for scene at: %s", data_dir)
         self._setup_paths(data_dir)
         if self.map_config.pose_info.pose_type == "mobile_base":
-            print("[create_map] Using pose_type=mobile_base")
+            logger.info("Using pose_type=mobile_base")
             self.map_builder = VLMapBuilder(
                 self.data_dir,
                 self.map_config,
@@ -55,10 +58,10 @@ class VLMap(Map):
                 self.base2cam_tf,
                 self.base_transform,
             )
-            print("[create_map] Building map (mobile_base)...")
+            logger.info("Building map (mobile_base)...")
             self.map_builder.create_mobile_base_map()
         elif self.map_config.pose_info.pose_type == "camera_base":
-            print("[create_map] Using pose_type=camera_base")
+            logger.info("Using pose_type=camera_base")
             self.map_builder = VLMapBuilderCam(
                 self.data_dir,
                 self.map_config,
@@ -68,18 +71,18 @@ class VLMap(Map):
                 self.base2cam_tf,
                 self.base_transform,
             )
-            print("[create_map] Building map (camera_base)...")
+            logger.info("Building map (camera_base)...")
             self.map_builder.create_camera_map()
         else:
             raise ValueError("Invalid pose type")
-        print("[create_map] Map creation completed.")
+        logger.info("Map creation completed.")
 
     def load_map(self, data_dir: str) -> bool:
         self._setup_paths(data_dir)
-        print(self.data_dir)
+        logger.info("Loading map for scene at: %s", self.data_dir)
         if self.map_config.pose_info.pose_type == "mobile_base":
             self.map_save_path = Path(data_dir) / "vlmap" / "vlmaps.h5df"
-            print(self.map_save_path)
+            logger.debug("Map path: %s", self.map_save_path)
             if not self.map_save_path.exists():
                 assert False, "Loading VLMap failed because the file doesn't exist."
             (
@@ -92,7 +95,7 @@ class VLMap(Map):
             ) = load_3d_map(self.map_save_path)
         elif self.map_config.pose_info.pose_type == "camera_base":
             self.map_save_path = Path(data_dir) / "vlmap_cam" / "vlmaps_cam.h5df"
-            print(self.map_save_path)
+            logger.debug("Map path: %s", self.map_save_path)
             if not self.map_save_path.exists():
                 assert False, "Loading VLMap failed because the file doesn't exist."
             (
@@ -113,7 +116,7 @@ class VLMap(Map):
 
     def _init_clip(self, clip_version="ViT-B/32"):
         if hasattr(self, "clip_model"):
-            print("clip model is already initialized")
+            logger.debug("clip model is already initialized")
             return
         if torch.cuda.is_available():
             self.device = "cuda"
@@ -132,7 +135,7 @@ class VLMap(Map):
             "ViT-B/16": 512,
             "ViT-L/14": 768,
         }[self.clip_version]
-        print("Loading CLIP model...")
+        logger.info("Loading CLIP model %s on %s", self.clip_version, self.device)
         self.clip_model, self.preprocess = clip.load(self.clip_version)  # clip.available_models()
         self.clip_model.to(self.device).eval()
 
