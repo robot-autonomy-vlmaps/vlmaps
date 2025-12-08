@@ -10,6 +10,7 @@ data
 *obj_names_features.txt
 *place_names_features.txt
 *.npy
+!docker-compose.yml
 *.yml
 *checkpoints
 *.ckpt

@@ -1,5 +1,10 @@
-import os
-import openai
+from __future__ import annotations
+
+from vlmaps.utils.llm_client import (
+    get_chat_model_name,
+    get_completion_model_name,
+    get_llm_client,
+)
 
 
 def parse_object_goal_instruction_deprecated(language_instr):
@@ -8,10 +13,7 @@ def parse_object_goal_instruction_deprecated(language_instr):
     Parse language instruction into a series of landmarks
     Example: "first go to the kitchen and then go to the toilet" -> ["kitchen", "toilet"]
     """
-    import openai
-
-    openai_key = os.environ["OPENAI_KEY"]
-    openai.api_key = openai_key
+    client = get_llm_client()
     question = f"""
     I: go to the kitchen and then go to the toilet. A: kitchen, toilet
     I: go to the chair and then go to another chair. A: chair, chair
@@ -22,14 +24,14 @@ def parse_object_goal_instruction_deprecated(language_instr):
     I: Go front left and move to the table, then turn around and find a cushion, later stand next to a column before finally navigate to any appliances. A: table, cushion, column, appliances.
     I: Move to the west of the chair, with the sofa on your right, move to the table, then turn right 90 degree, then find a table. A: chair, table
     I: {language_instr}. A:"""
-    response = openai.Completion.create(
-        engine="text-davinci-002",
+    response = client.completions.create(
+        model=get_completion_model_name(),
         prompt=question,
         max_tokens=64,
         temperature=0.0,
         stop=None,
     )
-    result = response["choices"][0]["text"].strip()
+    result = response.choices[0].text.strip()
     print("landmarks: ", result)
     return [x.strip() for x in result.split(",")]
 
@@ -38,13 +40,9 @@ def parse_object_goal_instruction(language_instr):
     Parse language instruction into a series of landmarks
     Example: "first go to the kitchen and then go to the toilet" -> ["kitchen", "toilet"]
     """
-    import openai
-
-    openai_key = os.environ["OPENAI_KEY"]
-    openai.api_key = openai_key
-    client = openai.OpenAI(api_key=openai_key)
+    client = get_llm_client()
     response = client.chat.completions.create(
-        model="gpt-4-turbo",
+        model=get_chat_model_name(),
         messages=[
             {
                 "role": "user",
@@ -127,13 +125,10 @@ def parse_spatial_instruction_deprecated(language_instr):
     """
     [deprecated]: only for older version of OpenAI API
     """
-    import openai
-
-    openai_key = os.environ["OPENAI_KEY"]
-    openai.api_key = openai_key
     # instructions_list = language_instr.split(",")
     instructions_list = [language_instr]
     results = ""
+    client = get_llm_client()
     for lang in instructions_list:
         question = f"""
 # move a bit to the right of the refrigerator.
@@ -255,14 +250,14 @@ robot.move_forward(3)
 # {lang}
     """
         print("lang: ", lang)
-        response = openai.Completion.create(
-            engine="text-davinci-002",
+        response = client.completions.create(
+            model=get_completion_model_name(),
             prompt=question,
             max_tokens=400,
             temperature=0.0,
             stop="###",
         )
-        result = response["choices"][0]["text"].strip()
+        result = response.choices[0].text.strip()
         if result:
             results += result + "\n"
         print(result)
@@ -271,17 +266,13 @@ robot.move_forward(3)
     return results
 
 def parse_spatial_instruction(language_instr):
-    import openai
-
-    openai_key = os.environ["OPENAI_KEY"]
-    openai.api_key = openai_key
     # instructions_list = language_instr.split(",")
     instructions_list = [language_instr]
     results = ""
+    client = get_llm_client()
     for lang in instructions_list:
-        client = openai.OpenAI(api_key=openai_key)
         response = client.chat.completions.create(
-            model="gpt-4-turbo",
+            model=get_chat_model_name(),
             messages=[
                 {"role": "user", "content": "move a bit to the right of the refrigerator"},
                 {"role": "assistant", "content": "robot.move_to_right('refrigerator')"},

@@ -10,6 +10,16 @@
 
 [Chenguang Huang](http://www2.informatik.uni-freiburg.de/~huang/), [Oier Mees](https://www.oiermees.com/), [Andy Zeng](https://andyzeng.github.io/), [Wolfram Burgard](http://www2.informatik.uni-freiburg.de/~burgard)
 
+## 📚 Documentation
+
+**For team members and contributors**: Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+- **[Architecture Documentation](docs/ARCHITECTURE.md)** - Complete guide to VLMAPS architecture, LSEG integration, LLM integration, and all major components
+- **[Quick Reference Guide](docs/QUICK_REFERENCE.md)** - Fast lookup for code locations and common tasks
+- **[Documentation Index](docs/README.md)** - Overview of all available documentation
+
+**New to the codebase?** Start with the [Architecture Documentation](docs/ARCHITECTURE.md) to understand how everything works together.
+
 We present **VLMAPs** (**V**isual **L**anguage **Maps**),  a spatial map representation in which pretrained visuallanguage model features are fused into a 3D reconstruction of the physical
 world. Spatially anchoring visual language features enables *natural language indexing in the map*, which can be used to, e.g., localize landmarks
 or spatial references with respect to landmarks – enabling zero-shot spatial
@@ -23,6 +33,64 @@ goal navigation without additional data collection or model finetuning.
 # Quick Start
 
 Try VLMaps creation and landmark indexing in [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1xsH9Gr_O36sBZaoPNq1SmqgOOF12spV0?usp=sharing)
+
+## Docker (CUDA + Miniconda) Quickstart
+
+If you have an NVIDIA GPU and the NVIDIA Container Toolkit installed, you can run VLMaps in a container with a preconfigured CUDA + Miniconda setup. This persists your dataset and caches to speed up iterations.
+
+```bash
+# 1) Ensure NVIDIA Container Toolkit is installed
+#    https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+
+# 2) Build the image (first time only)
+docker compose -f docker-compose.yml build
+
+# 3) Start the dev container (runs in background)
+docker compose -f docker-compose.yml up -d
+
+# 4) Enter the container (conda env 'vlmaps' is auto-activated)
+docker compose -f docker-compose.yml exec vlmaps bash
+
+# 5) Your repo is at /workspace/vlmaps, dataset is mounted at /dataset
+#    Example: run an app module
+cd /workspace/vlmaps/application
+python create_map.py
+```
+
+Notes:
+- The `./dataset` directory on your host is bind-mounted to `/dataset` inside the container. Place or download datasets into `./dataset` to persist them.
+- Conda installation, pip cache, and HuggingFace cache persist via named volumes to speed up rebuilds.
+- The container starts with `sleep infinity`; use `exec bash` to get an interactive shell.
+- Files created inside the container will use your host UID/GID to avoid permission issues.
+- The compose file also spins up an `llm` service that runs [Ollama](https://ollama.com/) with an OpenAI-compatible API for local language reasoning.
+
+### Local LLM (optional but recommended)
+
+The default compose setup includes an `llm` container that exposes an OpenAI-compatible HTTP endpoint at `http://llm:11434/v1`. This lets VLMaps use a local model instead of paid OpenAI endpoints.
+
+```bash
+# Pull the desired model once (e.g. mistral) after the services are up
+docker compose -f docker-compose.yml exec llm ollama pull mistral
+
+# You can run prompts directly to test
+docker compose -f docker-compose.yml exec llm ollama run mistral "Summarize VLMaps in one sentence."
+```
+
+When using the default compose environment, VLMaps containers automatically:
+- Set `OPENAI_API_BASE=http://llm:11434/v1`
+- Use `OPENAI_CHAT_MODEL=mistral`
+- Use `OPENAI_COMPLETION_MODEL=mistral`
+
+To change models or point to a different server, set the following environment variables before running `docker compose` (or place them in a `.env` file):
+
+| Purpose | Variable | Default |
+| --- | --- | --- |
+| API base URL | `VLMAPS_LLM_API_BASE` | `http://llm:11434/v1` |
+| API key (if required) | `VLMAPS_LLM_API_KEY` | `ollama` |
+| Chat completions model | `VLMAPS_LLM_CHAT_MODEL` | `mistral` |
+| Legacy completions model | `VLMAPS_LLM_COMPLETION_MODEL` | `mistral` |
+
+Any OpenAI-compatible server (vLLM, TGI, LM Studio, llama.cpp, etc.) can be used by pointing these variables to the appropriate host/model. Leave them unset to fall back to the hosted OpenAI API (requires `OPENAI_KEY`).
 
 ## Dependencies installation
 
