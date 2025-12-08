@@ -19,24 +19,32 @@ def _ensure_parent(path: Path) -> None:
 def _render_pcd_offscreen(pcd: o3d.geometry.PointCloud, output_path: Path) -> None:
     logger.debug("Rendering point cloud offscreen to %s", output_path)
     _ensure_parent(output_path)
-    # Use OffscreenRenderer to avoid GLFW/X11
-    bbox = pcd.get_axis_aligned_bounding_box()
-    extent = bbox.get_extent()
-    diag = max(extent[0], extent[1], extent[2])
-    # heuristics for camera distance and image size
-    img_size = 800
-    renderer = rendering.OffscreenRenderer(img_size, img_size)
-    mat = rendering.MaterialRecord()
-    mat.shader = "defaultUnlit"
-    renderer.scene.add_geometry("pcd", pcd, mat)
-    center = bbox.get_center()
-    eye = center + diag * 1.5 * np.array([1, 1, 1])
-    up = [0, 0, 1]
-    renderer.setup_camera(60, center, eye, up)
-    renderer.scene.scene.enable_sun_light(True)
-    img = renderer.render_to_image()
-    o3d.io.write_image(str(output_path), img)
-    logger.info("Saved 3D visualization to %s", output_path)
+    try:
+        # Use OffscreenRenderer to avoid GLFW/X11
+        bbox = pcd.get_axis_aligned_bounding_box()
+        extent = bbox.get_extent()
+        diag = max(extent[0], extent[1], extent[2])
+        # heuristics for camera distance and image size
+        img_size = 800
+        renderer = rendering.OffscreenRenderer(img_size, img_size)
+        mat = rendering.MaterialRecord()
+        mat.shader = "defaultUnlit"
+        renderer.scene.add_geometry("pcd", pcd, mat)
+        center = bbox.get_center()
+        eye = center + diag * 1.5 * np.array([1, 1, 1])
+        up = [0, 0, 1]
+        renderer.setup_camera(60, center, eye, up)
+        renderer.scene.scene.enable_sun_light(True)
+        img = renderer.render_to_image()
+        o3d.io.write_image(str(output_path), img)
+        logger.info("Saved 3D visualization to %s", output_path)
+    except Exception as e:
+        logger.error("Failed to render 3D visualization offscreen: %s", e)
+        logger.warning(
+            "EGL initialization may have failed. Ensure GPU devices are accessible (/dev/dri) and NVIDIA drivers are properly configured."
+        )
+        logger.warning("Skipping 3D visualization. Consider using index_2d=true for 2D visualizations instead.")
+        raise
 
 
 def visualize_rgb_map_3d(pc: np.ndarray, rgb: np.ndarray, gui: bool = True, output_path: Path = None):
