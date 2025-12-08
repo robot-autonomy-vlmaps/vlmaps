@@ -36,7 +36,7 @@ $ conda create -n vlmaps python=3.8 -y  # or use virtualenv
 $ conda activate vlmaps
 $ conda install jupyter -y
 $ cd vlmaps
-$ bash install.bash
+$ bash scripts/install.bash
 ```
 
 ## Run Demo

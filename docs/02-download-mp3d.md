@@ -37,7 +37,7 @@ export VLMAPS_MP3D_DATA_DIR=/path/to/your/data
 ## Step 3: Start the Container
 
 ```bash
-./start.bash
+./scripts/start.bash
 ```
 
 ## Step 4: Run the Download Script
@@ -45,13 +45,13 @@ export VLMAPS_MP3D_DATA_DIR=/path/to/your/data
 Inside the container, run the download script:
 
 ```bash
-./download-mp3d.bash
+./scripts/download-mp3d.bash
 ```
 
 Or with a specific scene ID:
 
 ```bash
-./download-mp3d.bash 17DRP5sb8fy
+./scripts/download-mp3d.bash 17DRP5sb8fy
 ```
 
 ### What the Script Does

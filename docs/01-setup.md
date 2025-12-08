@@ -52,10 +52,10 @@ Docker Compose will automatically read this file.
 
 ## Step 3: Build and Start the Container
 
-Use the provided `start.bash` script:
+Use the provided `scripts/start.bash` script:
 
 ```bash
-./start.bash
+./scripts/start.bash
 ```
 
 Or manually with docker-compose:
@@ -71,7 +71,7 @@ The project provides a pre-built Docker image with all dependencies pre-installe
 
 ```bash
 # The docker-compose.yml automatically uses the pre-built image
-./start.bash
+./scripts/start.bash
 ```
 
 The image is automatically pulled from GitHub Container Registry: `ghcr.io/robot-autonomy-vlmaps/vlmaps:latest`
@@ -83,7 +83,7 @@ If you want to build the image locally (e.g., for development or customization):
 ```bash
 # Set environment variable to force local build
 export VLMAPS_BUILD_LOCAL=true
-./start.bash
+./scripts/start.bash
 
 # Or edit docker-compose.yml to comment out 'image:' and uncomment 'build:'
 ```
@@ -92,7 +92,7 @@ export VLMAPS_BUILD_LOCAL=true
 
 ## Step 4: Verify Installation
 
-All dependencies are pre-installed in the image, so you can skip `install.bash`. However, if you built locally or want to verify, check that everything is set up correctly:
+All dependencies are pre-installed in the image, so you can skip `scripts/install.bash`. However, if you built locally or want to verify, check that everything is set up correctly:
 
 ```bash
 # Check conda environment
@@ -108,13 +108,13 @@ python -c "import habitat_sim; print('habitat-sim installed successfully')"
 python -c "import torch; import clip; print('Dependencies OK')"
 ```
 
-**Note**: If you built the image locally and dependencies aren't installed, you can run `bash install.bash` inside the container. However, with the pre-built image, everything should already be installed.
+**Note**: If you built the image locally and dependencies aren't installed, you can run `bash scripts/install.bash` inside the container. However, with the pre-built image, everything should already be installed.
 
 ## Container Management
 
 ### Starting the Container
 ```bash
-./start.bash
+./scripts/start.bash
 ```
 
 ### Stopping the Container

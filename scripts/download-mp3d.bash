@@ -2,8 +2,8 @@
 
 # Script to download Matterport3D data using download_mp.py
 # This script is designed to run inside the dev container
-# Usage: ./download-mp3d.bash [SCENE_ID]
-# Example: ./download-mp3d.bash 17DRP5sb8fy
+# Usage: ./scripts/download-mp3d.bash [SCENE_ID]
+# Example: ./scripts/download-mp3d.bash 17DRP5sb8fy
 
 set -e  # Exit on error
 

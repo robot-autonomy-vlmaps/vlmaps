@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Script to start/attach to vlmaps dev container using docker-compose
-# Usage: ./start.bash [MP3D_DATA_DIR]
-# Example: ./start.bash /path/to/data
-# Or: VLMAPS_MP3D_DATA_DIR=/path/to/data ./start.bash
+# Usage: ./scripts/start.bash [MP3D_DATA_DIR]
+# Example: ./scripts/start.bash /path/to/data
+# Or: VLMAPS_MP3D_DATA_DIR=/path/to/data ./scripts/start.bash
 
 # Detect docker-compose command (supports both 'docker-compose' and 'docker compose')
 if command -v docker-compose &> /dev/null; then
@@ -30,9 +30,9 @@ else
     echo "" >&2
     echo "Please set VLMAPS_MP3D_DATA_DIR environment variable or provide it as an argument:" >&2
     echo "  export VLMAPS_MP3D_DATA_DIR=/path/to/data" >&2
-    echo "  ./start.bash" >&2
+    echo "  ./scripts/start.bash" >&2
     echo "Or:" >&2
-    echo "  ./start.bash /path/to/data" >&2
+    echo "  ./scripts/start.bash /path/to/data" >&2
     exit 1
 fi
 
