@@ -35,6 +35,11 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=all
       - DEBIAN_FRONTEND=noninteractive
       - TERM=${TERM:-xterm-256color}
+      # Headless-friendly defaults
+      - PYOPENGL_PLATFORM=egl
+      - O3D_RENDERING_ENABLE_HEADLESS=1
+      - MPLBACKEND=Agg
+      - QT_QPA_PLATFORM=offscreen
     
     # Network and IPC settings for X11
     network_mode: host

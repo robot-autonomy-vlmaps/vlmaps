@@ -16,7 +16,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/conda/bin:$PATH \
     CONDA_AUTO_UPDATE_CONDA=false \
     PYTHONUNBUFFERED=1 \
-    TERM=xterm-256color
+    TERM=xterm-256color \
+    PYOPENGL_PLATFORM=egl \
+    O3D_RENDERING_ENABLE_HEADLESS=1 \
+    MPLBACKEND=Agg \
+    QT_QPA_PLATFORM=offscreen
 
 # Install system dependencies in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
