@@ -1,11 +1,4 @@
 notebook
-# PyTorch with CUDA 12.4 support
-# Note: PyTorch should be installed via conda for local development:
-# conda install pytorch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 pytorch-cuda=12.4 -c pytorch -c nvidia
-# Or via pip: pip install torch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu124
-torch==2.5.0
-torchvision==0.20.0
-torchaudio==2.5.0
 # habitat-sim wheels are built against numpy 1.x—pin to <2 to avoid ABI issues
 numpy<2
 # opencv-python 4.12+ requires numpy>=2; stick to 4.10 to keep numpy<2 compatible
