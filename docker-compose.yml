@@ -24,9 +24,12 @@ services:
       - .:/vlmaps
       # Preserve bash history
       - vlmaps-bash-history:/root/.bash_history
-      # X11 forwarding
+      # X11 forwarding (optional, for GUI mode)
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${HOME}/.Xauthority:/root/.Xauthority:ro
+    # Device mounts for EGL/GPU access
+    devices:
+      - /dev/dri:/dev/dri
     
     # Environment variables
     environment:
@@ -40,6 +43,9 @@ services:
       - O3D_RENDERING_ENABLE_HEADLESS=1
       - MPLBACKEND=Agg
       - QT_QPA_PLATFORM=offscreen
+      # NVIDIA EGL support
+      - NVIDIA_DRIVER_CAPABILITIES=graphics,compute,utility
+      - __GLX_VENDOR_LIBRARY_NAME=nvidia
     
     # Network and IPC settings for X11
     network_mode: host
