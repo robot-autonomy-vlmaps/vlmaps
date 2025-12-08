@@ -34,7 +34,14 @@ def main(config: DictConfig) -> None:
     output_dir = Path(config.viz.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Saving outputs to %s", output_dir)
-    visualize_rgb_map_3d(vlmap.grid_pos, vlmap.grid_rgb, gui=config.viz.gui, output_path=output_dir / "rgb_map.png")
+    # Try to save initial RGB map (3D), but don't fail if EGL unavailable
+    try:
+        visualize_rgb_map_3d(vlmap.grid_pos, vlmap.grid_rgb, gui=config.viz.gui, output_path=output_dir / "rgb_map.png")
+        if not (output_dir / "rgb_map.png").exists():
+            logger.warning("RGB map 3D visualization was not saved. EGL may not be available.")
+            logger.info("Tip: Use index_2d=true for 2D visualizations that don't require EGL.")
+    except Exception as e:
+        logger.warning("Failed to save RGB map visualization: %s", e)
     cat = input("What is your interested category in this scene?")
     # cat = "chair"
 
@@ -52,9 +59,20 @@ def main(config: DictConfig) -> None:
         logger.info("Using 2D indexing visualization")
         mask_2d = pool_3d_label_to_2d(mask, vlmap.grid_pos, config.params.gs)
         rgb_2d = pool_3d_rgb_to_2d(vlmap.grid_rgb, vlmap.grid_pos, config.params.gs)
-        visualize_masked_map_2d(rgb_2d, mask_2d, gui=config.viz.gui, output_path=output_dir / f"mask_2d_{cat_slug}.png")
+        mask_path = output_dir / f"mask_2d_{cat_slug}.png"
+        heatmap_path = output_dir / f"heatmap_2d_{cat_slug}.png"
+        visualize_masked_map_2d(rgb_2d, mask_2d, gui=config.viz.gui, output_path=mask_path)
         heatmap = get_heatmap_from_mask_2d(mask_2d, cell_size=config.params.cs, decay_rate=config.decay_rate)
-        visualize_heatmap_2d(rgb_2d, heatmap, gui=config.viz.gui, output_path=output_dir / f"heatmap_2d_{cat_slug}.png")
+        visualize_heatmap_2d(rgb_2d, heatmap, gui=config.viz.gui, output_path=heatmap_path)
+        # Verify files were created
+        if mask_path.exists():
+            logger.info("Saved mask visualization to %s", mask_path)
+        else:
+            logger.error("Failed to save mask visualization to %s", mask_path)
+        if heatmap_path.exists():
+            logger.info("Saved heatmap visualization to %s", heatmap_path)
+        else:
+            logger.error("Failed to save heatmap visualization to %s", heatmap_path)
     else:
         logger.info("Using 3D indexing visualization")
         visualize_masked_map_3d(

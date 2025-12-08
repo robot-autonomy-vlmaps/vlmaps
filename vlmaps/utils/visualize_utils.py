@@ -83,6 +83,9 @@ def visualize_rgb_map_3d(pc: np.ndarray, rgb: np.ndarray, gui: bool = True, outp
         o3d.visualization.draw_geometries([pcd])
     elif output_path is not None:
         _render_pcd_offscreen(pcd, output_path)
+        # Check if file was actually created
+        if not output_path.exists():
+            logger.warning("3D visualization file was not created at %s. EGL may not be available.", output_path)
     elif not gui:
         logger.info("3D RGB visualization skipped (no output_path provided)")
 
