@@ -16,9 +16,32 @@ def _ensure_parent(path: Path) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
 
 
+def _check_egl_available() -> bool:
+    """Check if EGL is available for headless rendering"""
+    import os
+
+    # Check if /dev/dri devices exist
+    if not os.path.exists("/dev/dri"):
+        return False
+    # Try to list DRI devices
+    try:
+        dri_devices = [d for d in os.listdir("/dev/dri") if d.startswith("card")]
+        return len(dri_devices) > 0
+    except Exception:
+        return False
+
+
 def _render_pcd_offscreen(pcd: o3d.geometry.PointCloud, output_path: Path) -> None:
     logger.debug("Rendering point cloud offscreen to %s", output_path)
     _ensure_parent(output_path)
+
+    # Check EGL availability before attempting render
+    if not _check_egl_available():
+        logger.warning("EGL not available (no /dev/dri devices found). Skipping 3D visualization.")
+        logger.warning("To enable 3D visualization, ensure GPU devices are mounted and accessible.")
+        logger.warning("Consider using index_2d=true for 2D visualizations instead.")
+        return
+
     try:
         # Use OffscreenRenderer to avoid GLFW/X11
         bbox = pcd.get_axis_aligned_bounding_box()
@@ -44,7 +67,7 @@ def _render_pcd_offscreen(pcd: o3d.geometry.PointCloud, output_path: Path) -> No
             "EGL initialization may have failed. Ensure GPU devices are accessible (/dev/dri) and NVIDIA drivers are properly configured."
         )
         logger.warning("Skipping 3D visualization. Consider using index_2d=true for 2D visualizations instead.")
-        raise
+        # Don't raise - gracefully skip instead of crashing
 
 
 def visualize_rgb_map_3d(pc: np.ndarray, rgb: np.ndarray, gui: bool = True, output_path: Path = None):
@@ -112,7 +135,11 @@ def visualize_masked_map_3d(
         transparency,
     )
     heatmap = mask.astype(np.float16)
-    visualize_heatmap_3d(pc, heatmap, rgb, transparency, gui=gui, output_path=output_path)
+    # Gracefully skip if EGL not available
+    try:
+        visualize_heatmap_3d(pc, heatmap, rgb, transparency, gui=gui, output_path=output_path)
+    except Exception as e:
+        logger.warning("3D masked map visualization failed, skipping: %s", e)
 
 
 def visualize_heatmap_3d(
@@ -136,7 +163,11 @@ def visualize_heatmap_3d(
     heat = cv2.applyColorMap(sim_new, cv2.COLORMAP_JET)
     heat = heat.reshape(-1, 3)[:, ::-1].astype(np.float32)
     heat_rgb = heat * transparency + rgb * (1 - transparency)
-    visualize_rgb_map_3d(pc, heat_rgb, gui=gui, output_path=output_path)
+    # Gracefully skip if EGL not available
+    try:
+        visualize_rgb_map_3d(pc, heat_rgb, gui=gui, output_path=output_path)
+    except Exception as e:
+        logger.warning("3D heatmap visualization failed, skipping: %s", e)
 
 
 def pool_3d_label_to_2d(mask_3d: np.ndarray, grid_pos: np.ndarray, gs: int) -> np.ndarray:
