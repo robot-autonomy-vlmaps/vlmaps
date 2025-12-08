@@ -27,7 +27,9 @@ def main(config: DictConfig) -> None:
     print(data_dirs[config.scene_id])
     vlmap = VLMap(config.map_config, data_dir=data_dirs[config.scene_id])
     vlmap.load_map(data_dirs[config.scene_id])
-    visualize_rgb_map_3d(vlmap.grid_pos, vlmap.grid_rgb)
+    output_dir = Path(config.viz.output_dir).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    visualize_rgb_map_3d(vlmap.grid_pos, vlmap.grid_rgb, gui=config.viz.gui, output_path=output_dir / "rgb_map.png")
     cat = input("What is your interested category in this scene?")
     # cat = "chair"
 
@@ -40,18 +42,28 @@ def main(config: DictConfig) -> None:
     else:
         mask = vlmap.index_map(cat, with_init_cat=False)
 
+    cat_slug = cat.replace(" ", "_")
+
     if config.index_2d:
         mask_2d = pool_3d_label_to_2d(mask, vlmap.grid_pos, config.params.gs)
         rgb_2d = pool_3d_rgb_to_2d(vlmap.grid_rgb, vlmap.grid_pos, config.params.gs)
-        visualize_masked_map_2d(rgb_2d, mask_2d)
+        visualize_masked_map_2d(rgb_2d, mask_2d, gui=config.viz.gui, output_path=output_dir / f"mask_2d_{cat_slug}.png")
         heatmap = get_heatmap_from_mask_2d(mask_2d, cell_size=config.params.cs, decay_rate=config.decay_rate)
-        visualize_heatmap_2d(rgb_2d, heatmap)
+        visualize_heatmap_2d(rgb_2d, heatmap, gui=config.viz.gui, output_path=output_dir / f"heatmap_2d_{cat_slug}.png")
     else:
-        visualize_masked_map_3d(vlmap.grid_pos, mask, vlmap.grid_rgb)
+        visualize_masked_map_3d(
+            vlmap.grid_pos, mask, vlmap.grid_rgb, gui=config.viz.gui, output_path=output_dir / f"mask_3d_{cat_slug}.png"
+        )
         heatmap = get_heatmap_from_mask_3d(
             vlmap.grid_pos, mask, cell_size=config.params.cs, decay_rate=config.decay_rate
         )
-        visualize_heatmap_3d(vlmap.grid_pos, heatmap, vlmap.grid_rgb)
+        visualize_heatmap_3d(
+            vlmap.grid_pos,
+            heatmap,
+            vlmap.grid_rgb,
+            gui=config.viz.gui,
+            output_path=output_dir / f"heatmap_3d_{cat_slug}.png",
+        )
 
 
 if __name__ == "__main__":

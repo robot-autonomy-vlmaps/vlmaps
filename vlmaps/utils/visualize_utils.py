@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import open3d as o3d
 import cv2
@@ -5,13 +7,31 @@ from tqdm import tqdm
 from scipy.ndimage import distance_transform_edt
 
 
-def visualize_rgb_map_3d(pc: np.ndarray, rgb: np.ndarray):
+def _ensure_parent(path: Path) -> None:
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+
+
+def _render_pcd_offscreen(pcd: o3d.geometry.PointCloud, output_path: Path) -> None:
+    _ensure_parent(output_path)
+    vis = o3d.visualization.Visualizer()
+    vis.create_window(visible=False)
+    vis.add_geometry(pcd)
+    vis.poll_events()
+    vis.update_renderer()
+    vis.capture_screen_image(str(output_path), do_render=True)
+    vis.destroy_window()
+
+
+def visualize_rgb_map_3d(pc: np.ndarray, rgb: np.ndarray, gui: bool = True, output_path: Path = None):
     grid_rgb = rgb / 255.0
 
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(pc)
     pcd.colors = o3d.utility.Vector3dVector(grid_rgb)
-    o3d.visualization.draw_geometries([pcd])
+    if gui:
+        o3d.visualization.draw_geometries([pcd])
+    elif output_path is not None:
+        _render_pcd_offscreen(pcd, output_path)
 
 
 def get_heatmap_from_mask_3d(
@@ -37,17 +57,31 @@ def get_heatmap_from_mask_3d(
     return heatmap.flatten()
 
 
-def visualize_masked_map_3d(pc: np.ndarray, mask: np.ndarray, rgb: np.ndarray, transparency: float = 0.5):
+def visualize_masked_map_3d(
+    pc: np.ndarray,
+    mask: np.ndarray,
+    rgb: np.ndarray,
+    transparency: float = 0.5,
+    gui: bool = True,
+    output_path: Path = None,
+):
     heatmap = mask.astype(np.float16)
-    visualize_heatmap_3d(pc, heatmap, rgb, transparency)
+    visualize_heatmap_3d(pc, heatmap, rgb, transparency, gui=gui, output_path=output_path)
 
 
-def visualize_heatmap_3d(pc: np.ndarray, heatmap: np.ndarray, rgb: np.ndarray, transparency: float = 0.5):
+def visualize_heatmap_3d(
+    pc: np.ndarray,
+    heatmap: np.ndarray,
+    rgb: np.ndarray,
+    transparency: float = 0.5,
+    gui: bool = True,
+    output_path: Path = None,
+):
     sim_new = (heatmap * 255).astype(np.uint8)
     heat = cv2.applyColorMap(sim_new, cv2.COLORMAP_JET)
     heat = heat.reshape(-1, 3)[:, ::-1].astype(np.float32)
     heat_rgb = heat * transparency + rgb * (1 - transparency)
-    visualize_rgb_map_3d(pc, heat_rgb)
+    visualize_rgb_map_3d(pc, heat_rgb, gui=gui, output_path=output_path)
 
 
 def pool_3d_label_to_2d(mask_3d: np.ndarray, grid_pos: np.ndarray, gs: int) -> np.ndarray:
@@ -78,7 +112,7 @@ def get_heatmap_from_mask_2d(mask: np.ndarray, cell_size: float = 0.05, decay_ra
     return heatmap
 
 
-def visualize_rgb_map_2d(rgb: np.ndarray):
+def visualize_rgb_map_2d(rgb: np.ndarray, gui: bool = True, output_path: Path = None):
     """visualize rgb image
 
     Args:
@@ -86,11 +120,17 @@ def visualize_rgb_map_2d(rgb: np.ndarray):
     """
     rgb = rgb.astype(np.uint8)
     bgr = rgb[:, :, ::-1]
-    cv2.imshow("rgb map", bgr)
-    cv2.waitKey(0)
+    if output_path is not None:
+        _ensure_parent(output_path)
+        cv2.imwrite(str(output_path), bgr)
+    if gui:
+        cv2.imshow("rgb map", bgr)
+        cv2.waitKey(0)
 
 
-def visualize_heatmap_2d(rgb: np.ndarray, heatmap: np.ndarray, transparency: float = 0.5):
+def visualize_heatmap_2d(
+    rgb: np.ndarray, heatmap: np.ndarray, transparency: float = 0.5, gui: bool = True, output_path: Path = None
+):
     """visualize heatmap
 
     Args:
@@ -101,14 +141,14 @@ def visualize_heatmap_2d(rgb: np.ndarray, heatmap: np.ndarray, transparency: flo
     heat = cv2.applyColorMap(sim_new, cv2.COLORMAP_JET)
     heat = heat[:, :, ::-1].astype(np.float32)  # convert to RGB
     heat_rgb = heat * transparency + rgb * (1 - transparency)
-    visualize_rgb_map_2d(heat_rgb)
+    visualize_rgb_map_2d(heat_rgb, gui=gui, output_path=output_path)
 
 
-def visualize_masked_map_2d(rgb: np.ndarray, mask: np.ndarray):
+def visualize_masked_map_2d(rgb: np.ndarray, mask: np.ndarray, gui: bool = True, output_path: Path = None):
     """visualize masked map
 
     Args:
         rgb (np.ndarray): (gs, gs, 3) element range [0, 255] np.uint8
         mask (np.ndarray): (gs, gs) element range [0, 1] np.uint8
     """
-    visualize_heatmap_2d(rgb, mask.astype(np.float32))
+    visualize_heatmap_2d(rgb, mask.astype(np.float32), gui=gui, output_path=output_path)
