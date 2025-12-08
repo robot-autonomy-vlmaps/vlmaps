@@ -56,12 +56,14 @@ class VLMapBuilder:
         """
         build the 3D map centering at the first base frame
         """
+        print("[create_map] [builder] init mobile_base map build")
         # access config info
         camera_height = self.map_config.pose_info.camera_height
         cs = self.map_config.cell_size
         gs = self.map_config.grid_size
         depth_sample_rate = self.map_config.depth_sample_rate
 
+        print(f"[create_map] [builder] loading poses from {self.pose_path}")
         self.base_poses = np.loadtxt(self.pose_path)
         if self.rot_type == "quat":
             self.init_base_tf = cvt_pose_vec2tf(self.base_poses[0])
@@ -77,11 +79,14 @@ class VLMapBuilder:
         self.map_save_dir = self.data_dir / "vlmap"
         os.makedirs(self.map_save_dir, exist_ok=True)
         self.map_save_path = self.map_save_dir / "vlmaps.h5df"
+        print(f"[create_map] [builder] map will be saved to {self.map_save_path}")
 
         # init lseg model
+        print("[create_map] [builder] initializing LSeg model/checkpoint")
         lseg_model, lseg_transform, crop_size, base_size, norm_mean, norm_std = self._init_lseg()
 
         # init the map
+        print("[create_map] [builder] initializing voxel grid")
         (
             vh,
             grid_feat,
@@ -100,6 +105,8 @@ class VLMapBuilder:
 
         pbar = tqdm(zip(self.rgb_paths, self.depth_paths, self.base_poses), total=len(self.rgb_paths))
         for frame_i, (rgb_path, depth_path, base_posevec) in enumerate(pbar):
+            if frame_i == 0:
+                print(f"[create_map] [builder] processing {len(self.rgb_paths)} frames...")
             # load data
             if self.rot_type == "quat":
                 habitat_base_pose = cvt_pose_vec2tf(base_posevec)
@@ -152,7 +159,9 @@ class VLMapBuilder:
                 # when the max_id exceeds the reserved size,
                 # double the grid_feat, grid_pos, weight, grid_rgb lengths
                 if max_id >= grid_feat.shape[0]:
-                    grid_feat, grid_pos, weight, grid_rgb = self._reserve_map_space(grid_feat, grid_pos, weight, grid_rgb)
+                    grid_feat, grid_pos, weight, grid_rgb = self._reserve_map_space(
+                        grid_feat, grid_pos, weight, grid_rgb
+                    )
 
                 # apply the distance weighting according to
                 # ConceptFusion https://arxiv.org/pdf/2302.07241.pdf Sec. 4.1, Feature fusion
@@ -182,10 +191,11 @@ class VLMapBuilder:
 
             mapped_iter_set.add(frame_i)
             if frame_i % 100 == 99:
-                print(f"Temporarily saving {max_id} features at iter {frame_i}...")
+                print(f"[create_map] [builder] checkpoint: {max_id} voxels saved at frame {frame_i}")
                 self._save_3d_map(grid_feat, grid_pos, weight, grid_rgb, occupied_ids, mapped_iter_set, max_id)
 
         self._save_3d_map(grid_feat, grid_pos, weight, grid_rgb, occupied_ids, mapped_iter_set, max_id)
+        print(f"[create_map] [builder] final map saved with {max_id} voxels")
 
     def create_camera_map(self):
         """

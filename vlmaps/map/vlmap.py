@@ -42,9 +42,10 @@ class VLMap(Map):
         self.categories = None
 
     def create_map(self, data_dir: Union[Path, str]) -> None:
-        print(f"Creating map for scene at: ", data_dir)
+        print(f"[create_map] Starting map creation for scene at: {data_dir}")
         self._setup_paths(data_dir)
         if self.map_config.pose_info.pose_type == "mobile_base":
+            print("[create_map] Using pose_type=mobile_base")
             self.map_builder = VLMapBuilder(
                 self.data_dir,
                 self.map_config,
@@ -54,8 +55,10 @@ class VLMap(Map):
                 self.base2cam_tf,
                 self.base_transform,
             )
+            print("[create_map] Building map (mobile_base)...")
             self.map_builder.create_mobile_base_map()
         elif self.map_config.pose_info.pose_type == "camera_base":
+            print("[create_map] Using pose_type=camera_base")
             self.map_builder = VLMapBuilderCam(
                 self.data_dir,
                 self.map_config,
@@ -65,9 +68,11 @@ class VLMap(Map):
                 self.base2cam_tf,
                 self.base_transform,
             )
+            print("[create_map] Building map (camera_base)...")
             self.map_builder.create_camera_map()
         else:
             raise ValueError("Invalid pose type")
+        print("[create_map] Map creation completed.")
 
     def load_map(self, data_dir: str) -> bool:
         self._setup_paths(data_dir)
