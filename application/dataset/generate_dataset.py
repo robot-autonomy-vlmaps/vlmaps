@@ -58,7 +58,7 @@ def generate_scene_data(save_dir: Union[Path, str], config: DictConfig, scene_pa
 
 @hydra.main(
     version_base=None,
-    config_path="../config",
+    config_path="../../config",
     config_name="generate_dataset.yaml",
 )
 def main(config: DictConfig) -> None:
