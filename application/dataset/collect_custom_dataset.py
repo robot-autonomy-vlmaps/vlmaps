@@ -9,7 +9,7 @@ from vlmaps.utils.habitat_utils import *
 
 @hydra.main(
     version_base=None,
-    config_path="../config",
+    config_path="../../config",
     config_name="collect_dataset.yaml",
 )
 def main(config: DictConfig) -> None:
