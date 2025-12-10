@@ -21,7 +21,8 @@ VLMaps (Visual Language Maps) is a spatial map representation where pretrained v
 - Docker and Docker Compose installed
 - NVIDIA GPU with CUDA support (for GPU acceleration)
 - Matterport3D dataset access (requires signing Terms of Use)
-- OpenAI API key (for navigation tasks)
+- LLM API key (default provider OpenAI; set `VLMAPS_LLM_KEY_OPENAI` or other provider key per `config/llm.yaml` with matching `provider`)
+For language model setup details, see [06 - LLM usage and configuration](06-llm.md).
 
 ## Getting Help
 
