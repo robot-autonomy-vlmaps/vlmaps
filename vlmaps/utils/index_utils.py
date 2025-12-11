@@ -11,6 +11,13 @@ def find_similar_category_id(class_name, classes_list):
     text = provider.find_similar_category(
         messages=[
             {
+                "role": "system",
+                "content": (
+                    "Choose the single most relevant option from the provided list. "
+                    "Reply with exactly one list item, no explanation, no punctuation."
+                ),
+            },
+            {
                 "role": "user",
                 "content": "What is television most relevant to among tv_monitor,plant,chair",
             },

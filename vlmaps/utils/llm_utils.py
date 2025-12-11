@@ -1,5 +1,41 @@
 from vlmaps.llm.factory import get_llm_provider
 
+
+def _sanitize_spatial_code(output: str) -> str:
+    """
+    Remove prose/markdown and keep only executable robot code lines.
+    """
+    if not output:
+        return ""
+
+    cleaned = (
+        output.replace("```python", "```")
+        .replace("```", "\n")
+        .replace("`", "")
+    )
+
+    allowed_prefixes = (
+        "robot.",
+        "pos",
+        "contour",
+        "for ",
+        "np.",
+        "ids",
+        "center",
+        "bbox_list",
+        "nearest_id",
+    )
+
+    kept_lines = []
+    for line in cleaned.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if any(stripped.startswith(prefix) for prefix in allowed_prefixes):
+            kept_lines.append(stripped)
+
+    return "\n".join(kept_lines)
+
 def parse_object_goal_instruction(language_instr):
     """
     Parse language instruction into a series of landmarks
@@ -8,6 +44,13 @@ def parse_object_goal_instruction(language_instr):
     provider = get_llm_provider()
     text = provider.parse_object_goal_instruction(
         messages=[
+            {
+                "role": "system",
+                "content": (
+                    "Extract a concise, comma-separated list of landmark nouns from the "
+                    "user request. Output only the list (no prose, no Markdown)."
+                ),
+            },
             {
                 "role": "user",
                 "content": "go to the kitchen and then go to the toilet",
@@ -89,6 +132,17 @@ def parse_spatial_instruction(language_instr):
     for lang in instructions_list:
         text = provider.parse_spatial_instruction(
             messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You write ONLY Python commands for a LangRobot instance named 'robot'. "
+                        "Do not include explanations, markdown, or code fences. "
+                        "Return one or more newline-separated statements that can be executed with eval(). "
+                        "Allowed APIs include robot.move_to_left/right/in_between/north/south/east/west/"
+                        "turn/turn_absolute/move_forward/face/move_to_object/with_object_on_left/"
+                        "with_object_on_right/get_pos/get_contour plus simple Python control flow."
+                    ),
+                },
                 {"role": "user", "content": "move a bit to the right of the refrigerator"},
                 {"role": "assistant", "content": "robot.move_to_right('refrigerator')"},
                 {"role": "user", "content": "move in between the couch and bookshelf"},
@@ -155,7 +209,8 @@ def parse_spatial_instruction(language_instr):
             ],
         )
         if text:
-            results += text + "\n"
+            sanitized = _sanitize_spatial_code(text)
+            results += (sanitized or text.strip()) + "\n"
     return results
 
 
