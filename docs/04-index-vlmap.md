@@ -123,16 +123,16 @@ index_2d: False         # True for 2D visualization, False for 3D
 init_categories: True   # Use Matterport3D categories (requires OpenAI API key)
 ```
 
-### Set Up OpenAI API (if using init_categories)
+### Set Up LLM API (if using init_categories)
 
-If `init_categories: True`, you need an OpenAI API key:
+If `init_categories: True`, you need an LLM API key. The provider matches `provider` in `config/llm.yaml` (default: `openai`). For OpenAI, set:
 
 ```bash
 # Inside container
-export OPENAI_KEY=your_api_key_here
+export VLMAPS_LLM_KEY_OPENAI=your_api_key_here
 
 # Or add to ~/.bashrc for persistence
-echo 'export OPENAI_KEY=your_api_key_here' >> ~/.bashrc
+echo 'export VLMAPS_LLM_KEY_OPENAI=your_api_key_here' >> ~/.bashrc
 ```
 
 **Getting an API Key:**

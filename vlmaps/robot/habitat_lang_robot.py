@@ -430,6 +430,11 @@ class HabitatLanguageRobot(LangRobot):
         Returns:
             List[str]: list of actions
         """
+        # Guard against invalid targets (e.g., object not found / middle point unavailable)
+        if pos is None or any(p is None for p in pos):
+            print("move_to: target position is invalid; skipping navigation.")
+            return []
+
         actual_actions_list = []
         success = False
         # while not success:

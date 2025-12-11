@@ -45,6 +45,8 @@ class HabitatSpatialGoalNavigationTask(HabitatTask):
         self.distance_to_subgoals = []
         self.success = False
         self.actions = []
+        # Ensure metric fields exist even if the task does not finish
+        self.subgoal_success_rate = 0.0
 
     def test_step(
         self, sim: habitat_sim.Simulator, action: str, agent_map_position: np.array = None, vis: bool = False
@@ -94,6 +96,10 @@ class HabitatSpatialGoalNavigationTask(HabitatTask):
         if len(self.finished_subgoals) == self.n_subgoals_in_task:
             self.success = True
             self.n_success_tasks += 1
+            self.n_tot_tasks += 1
+            self.n_tot_subgoals += self.n_subgoals_in_task
+            self.n_success_subgoals += len(self.finished_subgoals)
+            self.subgoal_success_rate = float(len(self.finished_subgoals)) / self.n_subgoals_in_task
 
     def save_single_task_metric(
         self,

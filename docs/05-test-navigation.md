@@ -9,23 +9,23 @@ This guide will help you test object goal navigation and spatial goal navigation
 - OpenAI API key set up (for navigation tasks)
 - Navigation task files in scene directories
 
-## Step 1: Set Up OpenAI API Key
+## Step 1: Set Up LLM API Key
 
-Ensure your OpenAI API key is set:
+Ensure your LLM API key is set. The provider follows `provider` in `config/llm.yaml` (default: `openai`):
 
 ```bash
 # Check if set
-echo $OPENAI_KEY
+echo $VLMAPS_LLM_KEY_OPENAI
 
 # If not set, set it
-export OPENAI_KEY=your_api_key_here
+export VLMAPS_LLM_KEY_OPENAI=your_api_key_here
 
 # For persistence, add to ~/.bashrc
-echo 'export OPENAI_KEY=your_api_key_here' >> ~/.bashrc
+echo 'export VLMAPS_LLM_KEY_OPENAI=your_api_key_here' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-**Note:** You need an OpenAI account with a payment method. Get your key from [OpenAI API Keys](https://platform.openai.com/account/api-keys).
+**Note:** You need an OpenAI account with a payment method for the default provider. Get your key from [OpenAI API Keys](https://platform.openai.com/account/api-keys).
 
 ## Step 2: Object Goal Navigation
 
@@ -170,8 +170,8 @@ nav:
 
 ## Troubleshooting
 
-### OpenAI API errors
-- Verify API key is set: `echo $OPENAI_KEY`
+### LLM API errors
+- Verify API key is set: `echo $VLMAPS_LLM_KEY_OPENAI`
 - Check account has credits/payment method
 - Verify internet connection
 

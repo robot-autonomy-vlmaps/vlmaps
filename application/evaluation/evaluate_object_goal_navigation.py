@@ -1,6 +1,4 @@
 import os
-from pathlib import Path
-import numpy as np
 from omegaconf import DictConfig
 import hydra
 
@@ -18,7 +16,6 @@ from vlmaps.utils.matterport3d_categories import mp3dcat
 def main(config: DictConfig) -> None:
     os.environ["MAGNUM_LOG"] = "quiet"
     os.environ["HABITAT_SIM_LOG"] = "quiet"
-    data_dir = Path(config.data_paths.vlmaps_data_dir) / "vlmaps_dataset"
     robot = HabitatLanguageRobot(config)
     object_nav_task = HabitatObjectNavigationTask(config)
     object_nav_task.reset_metrics()
