@@ -8,7 +8,7 @@ class OpenAIProvider(LLMProvider):
         self.cfg = config
         self.client = openai.OpenAI(api_key=api_key, base_url=config.base_url, timeout=config.timeout)
 
-    def parse_object_goal_instruction(self, messages: List[Dict[str, str]]) -> List[str]:
+    def parse_object_goal_instruction(self, messages: List[Dict[str, str]]) -> str:
         cfg = self.cfg.parse_object_goal_instruction
         response = self.client.chat.completions.create(
             **cfg,

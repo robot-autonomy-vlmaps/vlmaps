@@ -6,7 +6,7 @@ class LLMProvider(ABC):
     """Abstract provider with project-specific LLM operations."""
 
     @abstractmethod
-    def parse_object_goal_instruction(self, messages: List[Dict[str, str]]) -> List[str]:
+    def parse_object_goal_instruction(self, messages: List[Dict[str, str]]) -> str:
         ...
 
     @abstractmethod
