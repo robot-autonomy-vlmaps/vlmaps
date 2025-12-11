@@ -156,7 +156,7 @@ def parse_spatial_instruction(language_instr):
         )
         if text:
             results += text + "\n"
-    return text
+    return results
 
 
 if __name__ == '__main__':
