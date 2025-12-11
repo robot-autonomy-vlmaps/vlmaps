@@ -1,10 +1,12 @@
 from typing import Optional
+import threading
 
 from vlmaps.llm.base import LLMProvider
 from vlmaps.llm.config import LLMConfig, get_api_key_from_env, load_llm_config
 from vlmaps.llm.providers.openai_provider import OpenAIProvider
 
 _PROVIDER: Optional[LLMProvider] = None
+_PROVIDER_LOCK = threading.Lock()
 
 
 def create_llm_provider(config: LLMConfig, api_key: Optional[str] = None) -> LLMProvider:
@@ -22,7 +24,10 @@ def get_llm_provider(config_path: Optional[str] = None, api_key: Optional[str] =
     if _PROVIDER is not None:
         return _PROVIDER
 
-    config = load_llm_config(config_path)
-    _PROVIDER = create_llm_provider(config, api_key=api_key)
+    with _PROVIDER_LOCK:
+        if _PROVIDER is None:
+            config = load_llm_config(config_path)
+            _PROVIDER = create_llm_provider(config, api_key=api_key)
+
     return _PROVIDER
 

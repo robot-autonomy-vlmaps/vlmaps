@@ -1,21 +1,11 @@
 from vlmaps.llm.factory import get_llm_provider
 
-_LLM_PROVIDER = None
-
-
-def _provider():
-    global _LLM_PROVIDER
-    if _LLM_PROVIDER is None:
-        _LLM_PROVIDER = get_llm_provider()
-    return _LLM_PROVIDER
-
-
 def parse_object_goal_instruction(language_instr):
     """
     Parse language instruction into a series of landmarks
     Example: "first go to the kitchen and then go to the toilet" -> ["kitchen", "toilet"]
     """
-    provider = _provider()
+    provider = get_llm_provider()
     text = provider.parse_object_goal_instruction(
         messages=[
             {
@@ -93,7 +83,7 @@ def parse_object_goal_instruction(language_instr):
 
 
 def parse_spatial_instruction(language_instr):
-    provider = _provider()
+    provider = get_llm_provider()
     instructions_list = [language_instr]
     results = ""
     for lang in instructions_list:

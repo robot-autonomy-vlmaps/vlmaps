@@ -3,20 +3,10 @@ import numpy as np
 from vlmaps.utils.clip_utils import get_text_feats, multiple_templates
 from vlmaps.llm.factory import get_llm_provider
 
-_LLM_PROVIDER = None
-
-
-def _provider():
-    global _LLM_PROVIDER
-    if _LLM_PROVIDER is None:
-        _LLM_PROVIDER = get_llm_provider()
-    return _LLM_PROVIDER
-
-
 def find_similar_category_id(class_name, classes_list):
     if class_name in classes_list:
         return classes_list.index(class_name)
-    provider = _provider()
+    provider = get_llm_provider()
     classes_list_str = ",".join(classes_list)
     text = provider.find_similar_category(
         messages=[
