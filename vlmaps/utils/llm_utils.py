@@ -1,4 +1,8 @@
+import logging
+
 from vlmaps.llm.factory import get_llm_provider
+
+logger = logging.getLogger(__name__)
 
 
 def _sanitize_spatial_code(output: str) -> str:
@@ -216,4 +220,4 @@ def parse_spatial_instruction(language_instr):
 
 if __name__ == '__main__':
     text = parse_spatial_instruction("go to the sofa, turn right and move in between the table and the chair, and then move back and forth to the keyboard and the screen twice")
-    print(text)
+    logger.info("%s", text)

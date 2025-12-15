@@ -1,9 +1,11 @@
+import logging
 import numpy as np
 import open3d as o3d
 import cv2
 from tqdm import tqdm
 from scipy.ndimage import distance_transform_edt
 
+logger = logging.getLogger(__name__)
 
 def visualize_rgb_map_3d(pc: np.ndarray, rgb: np.ndarray):
     grid_rgb = rgb / 255.0
@@ -87,6 +89,8 @@ def visualize_rgb_map_2d(rgb: np.ndarray, waitkey: bool = False):
     rgb = rgb.astype(np.uint8)
     bgr = rgb[:, :, ::-1]
     cv2.imshow("rgb map", bgr)
+    if waitkey:
+        logger.info("Waiting for key press on rgb map window")
     cv2.waitKey(0 if waitkey else 1)
 
 

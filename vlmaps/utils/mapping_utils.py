@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import yaml
 import numpy as np
@@ -14,6 +15,7 @@ from scipy.spatial.transform import Rotation as R
 import h5py
 from typing import List, Dict, Tuple, Set, Union
 
+logger = logging.getLogger(__name__)
 
 def cvt_pose_vec2tf(pos_quat_vec: np.ndarray) -> np.ndarray:
     """
@@ -67,7 +69,7 @@ def load_calib(calib_path):
         f.readline()
         data = yaml.load(f, Loader=yaml.Loader)
     array = data["camera_matrix"]["data"]
-    print("calib array", array)
+    logger.debug("Loaded calibration array from %s: %s", calib_path, array)
     cam_mat = np.array([float(x) for x in array], dtype=np.float32).reshape((3, 3))
     return cam_mat
 
@@ -457,7 +459,7 @@ def generate_mask(gs, cs, hfov, theta, depth, robot_x, robot_y):
 def save_map(save_path, map):
     with open(save_path, "wb") as f:
         np.save(f, map)
-        print(f"{save_path} is saved.")
+        logger.info("%s is saved.", save_path)
 
 
 def load_map(load_path):
