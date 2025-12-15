@@ -648,6 +648,7 @@ def main(config: DictConfig) -> None:
     rgb = obs["color_sensor"]
     bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
     cv2.imshow("scr rgb", bgr)
+    logger.info("Waiting for key press on source rgb window")
     cv2.waitKey()
 
     tar_hab_tf = cvt_pose_vec2tf(robot.vlmaps_dataloader.base_poses[800])
@@ -656,6 +657,7 @@ def main(config: DictConfig) -> None:
     rgb = obs["color_sensor"]
     bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
     cv2.imshow("tar rgb", bgr)
+    logger.info("Waiting for key press on target rgb window")
     cv2.waitKey()
 
     robot.set_agent_state(hab_tf)
