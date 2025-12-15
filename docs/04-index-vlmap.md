@@ -75,8 +75,7 @@ pose_info:
 ### Run Map Creation
 
 ```bash
-cd application
-python create_map.py
+vlmaps map create
 ```
 
 This will:
@@ -143,8 +142,7 @@ echo 'export VLMAPS_LLM_KEY_OPENAI=your_api_key_here' >> ~/.bashrc
 ### Run Indexing
 
 ```bash
-cd application
-python index_map.py
+vlmaps map index
 ```
 
 ### Interactive Querying
