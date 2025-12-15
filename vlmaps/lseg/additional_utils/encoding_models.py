@@ -1,6 +1,7 @@
 ###########################################################################
 # Referred to: https://github.com/zhanghang1989/PyTorch-Encoding
 ###########################################################################
+import logging
 import math
 import numpy as np
 
@@ -19,6 +20,8 @@ up_kwargs = {'mode': 'bilinear', 'align_corners': True}
 
 __all__ = ['MultiEvalModule']
 
+logger = logging.getLogger(__name__)
+
 class MultiEvalModule(DataParallel):
     """Multi-size Segmentation Eavluator"""
     def __init__(self, module, nclass, device_ids=None, flip=True,
@@ -29,8 +32,13 @@ class MultiEvalModule(DataParallel):
         self.crop_size = module.crop_size
         self.scales = scales
         self.flip = flip
-        print('MultiEvalModule: base_size {}, crop_size {}'. \
-            format(self.base_size, self.crop_size))
+        logger.info(
+            "MultiEvalModule initialized with base_size=%s crop_size=%s scales=%s flip=%s",
+            self.base_size,
+            self.crop_size,
+            self.scales,
+            self.flip,
+        )
 
     def parallel_forward(self, inputs, **kwargs):
         """Multi-GPU Mult-size Evaluation

@@ -1,6 +1,7 @@
 ###########################################################################
 # Referred to: https://github.com/zhanghang1989/PyTorch-Encoding
 ###########################################################################
+import logging
 import math
 import numpy as np
 
@@ -19,6 +20,8 @@ up_kwargs = {'mode': 'bilinear', 'align_corners': True}
 
 __all__ = ['LSeg_MultiEvalModule']
 
+logger = logging.getLogger(__name__)
+
 
 class LSeg_MultiEvalModule(DataParallel):
     """Multi-size Segmentation Eavluator"""
@@ -29,8 +32,13 @@ class LSeg_MultiEvalModule(DataParallel):
         self.crop_size = module.crop_size
         self.scales = scales
         self.flip = flip
-        print('MultiEvalModule: base_size {}, crop_size {}'. \
-            format(self.base_size, self.crop_size))
+        logger.info(
+            "LSeg_MultiEvalModule initialized with base_size=%s crop_size=%s scales=%s flip=%s",
+            self.base_size,
+            self.crop_size,
+            self.scales,
+            self.flip,
+        )
 
     def parallel_forward(self, inputs, label_set='', **kwargs):
         """Multi-GPU Mult-size Evaluation
@@ -39,7 +47,7 @@ class LSeg_MultiEvalModule(DataParallel):
             inputs: list of Tensors
         """
         if len(label_set) < 10:
-            print('** MultiEvalModule parallel_forward phase: {} **'.format(label_set))
+            logger.info("MultiEvalModule parallel_forward phase: %s", label_set)
         self.nclass = len(label_set)
         inputs = [(input.unsqueeze(0).cuda(device),)
                   for input, device in zip(inputs, self.device_ids)]
@@ -56,7 +64,7 @@ class LSeg_MultiEvalModule(DataParallel):
         """Mult-size Evaluation"""
         # only single image is supported for evaluation
         if len(label_set) < 10:
-            print('** MultiEvalModule forward phase: {} **'.format(label_set))
+            logger.info("MultiEvalModule forward phase: %s", label_set)
         batch, _, h, w = image.size()
         assert(batch == 1)
         self.nclass = len(label_set)

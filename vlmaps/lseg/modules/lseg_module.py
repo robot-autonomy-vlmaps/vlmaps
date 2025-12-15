@@ -14,11 +14,12 @@ import numpy as np
 
 from scipy import signal
 import glob
-
+import logging
 from PIL import Image
 import matplotlib.pyplot as plt
 import pandas as pd
 
+logger = logging.getLogger(__name__)
 
 class LSegModule(LSegmentationModule):
     def __init__(self, data_path, dataset, batch_size, base_lr, max_epochs, **kwargs):
@@ -34,10 +35,10 @@ class LSegModule(LSegmentationModule):
             self.crop_size = 480
 
         use_pretrained = True
-        norm_mean= [0.5, 0.5, 0.5]
+        norm_mean = [0.5, 0.5, 0.5]
         norm_std = [0.5, 0.5, 0.5]
 
-        print('** Use norm {}, {} as the mean and std **'.format(norm_mean, norm_std))
+        logger.info("Using normalization mean=%s std=%s", norm_mean, norm_std)
 
         train_transform = [
             transforms.ToTensor(),
