@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, Dict, List, Tuple
 
@@ -10,6 +11,9 @@ from utils.ai2thor_constant import ai2thor_class_list
 from utils.clip_mapping_utils import load_map
 from utils.map.map import Map
 from utils.planning_utils import find_similar_category_id, get_segment_islands_pos, mp3dcat
+
+
+logger = logging.getLogger(__name__)
 
 
 class GTMap(Map):
@@ -28,7 +32,7 @@ class GTMap(Map):
             map_config["gaussian_sigma"],
         )
         self.obstacles_new_cropped = self.obstacles_new_cropped == 0
-        print("a GTMap is created")
+        logger.info("Initialized GTMap from %s", map_path)
 
     def load_categories(self, categories: List[str] = None):
         if categories is None:

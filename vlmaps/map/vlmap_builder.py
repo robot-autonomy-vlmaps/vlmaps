@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union, Set
@@ -24,6 +25,9 @@ from vlmaps.utils.mapping_utils import (
     get_sim_cam_mat,
 )
 from vlmaps.lseg.modules.models.lseg_net import LSegEncNet
+
+
+logger = logging.getLogger(__name__)
 
 
 def visualize_pc(pc: np.ndarray):
@@ -182,7 +186,7 @@ class VLMapBuilder:
 
             mapped_iter_set.add(frame_i)
             if frame_i % 100 == 99:
-                print(f"Temporarily saving {max_id} features at iter {frame_i}...")
+                logger.info("Temporarily saving %s features at iter %s", max_id, frame_i)
                 self._save_3d_map(grid_feat, grid_pos, weight, grid_rgb, occupied_ids, mapped_iter_set, max_id)
 
         self._save_3d_map(grid_feat, grid_pos, weight, grid_rgb, occupied_ids, mapped_iter_set, max_id)
@@ -241,7 +245,7 @@ class VLMapBuilder:
         checkpoint_path = checkpoint_dir / "demo_e200.ckpt"
         os.makedirs(checkpoint_dir, exist_ok=True)
         if not checkpoint_path.exists():
-            print("Downloading LSeg checkpoint...")
+            logger.info("Downloading LSeg checkpoint to %s", checkpoint_path)
             # the checkpoint is from official LSeg github repo
             # https://github.com/isl-org/lang-seg
             checkpoint_url = "https://drive.google.com/u/0/uc?id=1ayk6NXURI_vIPlym16f_RG3ffxBWHxvb"
