@@ -12,7 +12,7 @@ def _resolve_level(default: str = "INFO") -> int:
 
 
 class _ColorFormatter(logging.Formatter):
-    BASE_FMT = "%(levelname)-8s [%(name)s] [%(filename)s:%(lineno)d]\n\t%(message)s"
+    BASE_FMT = "[%(levelname)-8s %(asctime)s] %(message)-60s\t[%(filename)s:%(lineno)d]"
     COLORS = {
         logging.DEBUG: "\033[36m",  # cyan
         logging.INFO: "\033[32m",  # green
@@ -23,21 +23,18 @@ class _ColorFormatter(logging.Formatter):
     RESET = "\033[0m"
 
     def __init__(self, use_color: bool) -> None:
-        super().__init__(self.BASE_FMT)
+        super().__init__(self.BASE_FMT, datefmt="%H:%M:%S")
         self.use_color = use_color
 
     def format(self, record: LogRecord) -> str:
         original_levelname = record.levelname
-        original_name = record.name
         original_filename = record.filename
         if self.use_color:
             color = self.COLORS.get(record.levelno, "")
             record.levelname = f"{color}{record.levelname}{self.RESET}"
-            record.name = f"{color}{record.name}{self.RESET}"
             record.filename = f"{color}{record.filename}{self.RESET}"
         formatted = super().format(record)
         record.levelname = original_levelname
-        record.name = original_name
         record.filename = original_filename
         return formatted
 
@@ -70,7 +67,7 @@ def setup_logging(
     for handler in log_handlers:
         is_tty = hasattr(handler, "stream") and handler.stream in (sys.stdout, sys.stderr) and handler.stream.isatty()
         if isinstance(handler, RotatingFileHandler):
-            handler.setFormatter(logging.Formatter(_ColorFormatter.BASE_FMT))
+            handler.setFormatter(logging.Formatter(_ColorFormatter.BASE_FMT, datefmt="%H:%M:%S"))
         else:
             handler.setFormatter(_ColorFormatter(use_color=is_tty))
 
