@@ -1,8 +1,11 @@
 import argparse
+import logging
 
 from vlmaps.utils.llm_utils import parse_object_goal_instruction, parse_spatial_instruction
 from vlmaps.utils.index_utils import find_similar_category_id
+from vlmaps.utils.logging_utils import setup_logging
 
+logger = logging.getLogger(__name__)
 
 def main():
     parser = argparse.ArgumentParser(description="LLM helper smoke test (requires API key env)")
@@ -36,17 +39,18 @@ def main():
 
     if args.mode in ("object", "all"):
         resp = parse_object_goal_instruction(args.object_instr)
-        print("parse_object_goal_instruction ->", resp, "\n")
+        logger.info("parse_object_goal_instruction -> %s", resp)
 
     if args.mode in ("spatial", "all"):
         resp = parse_spatial_instruction(args.spatial_instr)
-        print("parse_spatial_instruction ->", resp, "\n")
+        logger.info("parse_spatial_instruction -> %s", resp)
 
     if args.mode in ("category", "all"):
         class_list = [c.strip() for c in args.choices.split(",") if c.strip()]
         idx = find_similar_category_id(args.category, class_list)
-        print("find_similar_category ->", class_list[idx], "\n")
+        logger.info("find_similar_category -> %s", class_list[idx])
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

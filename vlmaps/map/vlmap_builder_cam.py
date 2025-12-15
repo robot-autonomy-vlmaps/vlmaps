@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union, Set
@@ -26,6 +27,9 @@ from vlmaps.utils.mapping_utils import (
     get_sim_cam_mat,
 )
 from vlmaps.lseg.modules.models.lseg_net import LSegEncNet
+
+
+logger = logging.getLogger(__name__)
 
 
 def visualize_pc(pc: np.ndarray):
@@ -151,7 +155,7 @@ class VLMapBuilderCam:
                 rgb_v = rgb[py, px, :]
                 px, py, pz = project_point(pix_feats_intr, p_local)
                 if row >= height_map.shape[0] or col >= height_map.shape[1] or row < 0 or col < 0:
-                    print("out of range")
+                    logger.debug("Point projected out of range (row=%s col=%s); skipping", row, col)
                     continue
 
                 if height > height_map[row, col]:
@@ -187,7 +191,7 @@ class VLMapBuilderCam:
                             grid_feat[occupied_id] * weight[occupied_id] + feat.flatten() * alpha
                         ) / (weight[occupied_id] + alpha)
                         if weight[occupied_id] + alpha == 0:
-                            print("weight is 0")
+                            logger.warning("Weight is zero at occupied_id=%s", occupied_id)
                         grid_rgb[occupied_id] = (grid_rgb[occupied_id] * weight[occupied_id] + rgb_v * alpha) / (
                             weight[occupied_id] + alpha
                         )
@@ -195,7 +199,7 @@ class VLMapBuilderCam:
 
             mapped_iter_set.add(frame_i)
             if frame_i % (self.map_config.skip_frame * 100) == self.map_config.skip_frame * 99:
-                print(f"Temporarily saving {max_id} features at iter {frame_i}...")
+                logger.info("Temporarily saving %s features at iter %s", max_id, frame_i)
                 self.save_3d_map(grid_feat, grid_pos, weight, grid_rgb, occupied_ids, mapped_iter_set, max_id)
 
         self.save_3d_map(grid_feat, grid_pos, weight, grid_rgb, occupied_ids, mapped_iter_set, max_id)
@@ -264,7 +268,7 @@ class VLMapBuilderCam:
         checkpoint_path = checkpoint_dir / "demo_e200.ckpt"
         os.makedirs(checkpoint_dir, exist_ok=True)
         if not checkpoint_path.exists():
-            print("Downloading LSeg checkpoint...")
+            logger.info("Downloading LSeg checkpoint to %s", checkpoint_path)
             # the checkpoint is from official LSeg github repo
             # https://github.com/isl-org/lang-seg
             checkpoint_url = "https://drive.google.com/u/0/uc?id=1ayk6NXURI_vIPlym16f_RG3ffxBWHxvb"
@@ -340,22 +344,20 @@ class VLMapBuilderCam:
         self, row: int, col: int, height: int, gs: int, vh: int, init_height_id: int, occupied_ids: np.ndarray
     ) -> Tuple[int, int]:
         if not self._out_of_range(row, col, height, gs, vh):
-            print("not out of range")
+            logger.debug("Reserve grid check: within range for row=%s col=%s height=%s", row, col, height)
             return occupied_ids, init_height_id, vh
         if height < 0:
             tmp = -np.ones((gs, gs, -height), dtype=occupied_ids.dtype)
-            print("smaller than 0")
-            print("before: ", occupied_ids.shape)
+            logger.debug("Height below zero; expanding occupied_ids. before=%s", occupied_ids.shape)
             occupied_ids = np.concatenate([occupied_ids, tmp], axis=2)
-            print("after: ", occupied_ids.shape)
+            logger.debug("after=%s", occupied_ids.shape)
             init_height_id += -height
             vh += -height
         elif height >= vh:
             tmp = -np.ones((gs, gs, height - vh + 1), dtype=occupied_ids.dtype)
-            print("larger and equal than vh")
-            print("before: ", occupied_ids.shape)
+            logger.debug("Height exceeds vh; expanding occupied_ids. before=%s", occupied_ids.shape)
             occupied_ids = np.concatenate([tmp, occupied_ids], axis=2)
-            print("after: ", occupied_ids.shape)
+            logger.debug("after=%s", occupied_ids.shape)
             init_height_id += height
             vh += height
         return occupied_ids, init_height_id, vh

@@ -1,3 +1,4 @@
+import logging
 import os
 from argparse import ArgumentParser
 import numpy as np
@@ -6,6 +7,8 @@ from PIL import Image
 import torch
 
 import clip
+
+logger = logging.getLogger(__name__)
 
 multiple_templates = [
     "There is {} in the scene.",
@@ -166,7 +169,7 @@ def main():
     args = parser.parse_args()
     # loading models
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(device)
+    logger.info("Using device: %s", device)
     clip_version = "ViT-B/32"
     clip_feat_dim = {
         "RN50": 1024,
@@ -178,7 +181,7 @@ def main():
         "ViT-B/16": 512,
         "ViT-L/14": 768,
     }[clip_version]
-    print("Loading CLIP model...")
+    logger.info("Loading CLIP model...")
     clip_model, preprocess = clip.load(clip_version)  # clip.available_models()
     clip_model.to(device).eval()
 
@@ -190,7 +193,7 @@ def main():
     text_feats = get_text_feats_multiple_templates(categories, clip_model, clip_feat_dim)
 
     scores_mat = img_feats @ text_feats.T  # (1, categories_num)
-    print(scores_mat)
+    logger.info("Similarity scores: %s", scores_mat)
 
 
 def get_lseg_score(

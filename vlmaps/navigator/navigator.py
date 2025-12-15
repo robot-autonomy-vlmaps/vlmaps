@@ -1,8 +1,12 @@
+import logging
 import numpy as np
 import pyvisgraph as vg
+
 from vlmaps.utils.navigation_utils import build_visgraph_with_obs_map, plan_to_pos_v2
 from typing import Tuple, List, Dict
 
+
+logger = logging.getLogger(__name__)
 
 class Navigator:
     def __init__(self):
@@ -52,9 +56,7 @@ class Navigator:
         full_map_pos: (row, col) in full map
         Return (row, col) in cropped_map
         """
-        print("full_map_pos: ", full_map_pos)
-        print("self.rowmin: ", self.rowmin)
-        print("self.colmin: ", self.colmin)
+        logger.debug("Converting full_map_pos=%s using rowmin=%s colmin=%s", full_map_pos, self.rowmin, self.colmin)
         return [full_map_pos[0] - self.rowmin, full_map_pos[1] - self.colmin]
 
     def _convert_cropped_map_pos_to_full_map_pos(self, cropped_map_pos: Tuple[float, float]) -> Tuple[float, float]:

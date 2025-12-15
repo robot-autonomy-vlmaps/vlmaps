@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import logging
 from typing import Dict, List, Tuple, Union
 
 from omegaconf import DictConfig
@@ -11,6 +12,9 @@ from vlmaps.task.habitat_task import HabitatTask
 from vlmaps.utils.habitat_utils import agent_state2tf, get_position_floor_objects
 from vlmaps.utils.navigation_utils import get_dist_to_bbox_2d
 from vlmaps.utils.habitat_utils import display_sample
+
+
+logger = logging.getLogger(__name__)
 
 
 class HabitatObjectNavigationTask(HabitatTask):
@@ -51,14 +55,14 @@ class HabitatObjectNavigationTask(HabitatTask):
         try:
             return [x for x in self.same_floor_objects_list if x.category.name() == class_name]
         except NameError:
-            print("Call get_all_objects() before calling get_class_objects()")
+            logger.error("Call get_all_objects() before calling get_class_objects()")
             raise
 
     def find_closest_object_from_class(self, class_name: str, pos_hab: np.array):
         """
         pos_hab: 3d position in habitat world frame
         """
-        print("class name: ", class_name)
+        logger.debug("Finding closest object for class %s", class_name)
         class_objects = self.get_class_objects(class_name)
         dists_list = []
         for object in class_objects:
@@ -90,7 +94,13 @@ class HabitatObjectNavigationTask(HabitatTask):
             self.distance_to_subgoals.append(closest_dist)
             if closest_dist < self.config.nav.valid_range:
                 self.finished_subgoals.append(self.curr_subgoal_id)
-                print(f"({self.curr_subgoal_id + 1}/{4}) {next_subgoal_name} reached! Distance: {closest_dist}m.")
+                logger.info(
+                    "Subgoal %s/%s (%s) reached; distance=%.3fm",
+                    self.curr_subgoal_id + 1,
+                    self.n_subgoals_in_task,
+                    next_subgoal_name,
+                    closest_dist,
+                )
 
             self.curr_subgoal_id += 1
         else:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, Dict, List, Tuple
 
@@ -14,6 +15,9 @@ from utils.clip_mapping_utils import load_map
 from utils.clip_utils import get_text_feats
 from utils.map.map import Map
 from utils.planning_utils import find_similar_category_id, get_segment_islands_pos, mp3dcat, multiple_templates
+
+
+logger = logging.getLogger(__name__)
 
 
 class GradCAMMap(Map):
@@ -31,7 +35,7 @@ class GradCAMMap(Map):
         )
         self.load_categories()
 
-        print("a GradCAMMap is created")
+        logger.info("Initialized GradCAMMap from %s", map_path)
 
     def _init_clip(self, clip_version="ViT-B/32"):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -46,7 +50,7 @@ class GradCAMMap(Map):
             "ViT-B/16": 512,
             "ViT-L/14": 768,
         }[self.clip_version]
-        print("Loading CLIP model...")
+        logger.info("Loading CLIP model (%s) on %s", self.clip_version, self.device)
         self.clip_model, self.preprocess = clip.load(self.clip_version)  # clip.available_models()
         self.clip_model.to(self.device).eval()
 

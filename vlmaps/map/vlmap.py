@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
@@ -35,6 +36,9 @@ from vlmaps.utils.index_utils import find_similar_category_id, get_segment_islan
 from vlmaps.utils.clip_utils import get_lseg_score
 
 
+logger = logging.getLogger(__name__)
+
+
 class VLMap(Map):
     def __init__(self, map_config: DictConfig, data_dir: str = ""):
         super().__init__(map_config, data_dir=data_dir)
@@ -42,7 +46,7 @@ class VLMap(Map):
         self.categories = None
 
     def create_map(self, data_dir: Union[Path, str]) -> None:
-        print(f"Creating map for scene at: ", data_dir)
+        logger.info("Creating map for scene at %s", data_dir)
         self._setup_paths(data_dir)
         if self.map_config.pose_info.pose_type == "mobile_base":
             self.map_builder = VLMapBuilder(
@@ -71,10 +75,10 @@ class VLMap(Map):
 
     def load_map(self, data_dir: str) -> bool:
         self._setup_paths(data_dir)
-        print(self.data_dir)
+        logger.info("Loading map from %s", self.data_dir)
         if self.map_config.pose_info.pose_type == "mobile_base":
             self.map_save_path = Path(data_dir) / "vlmap" / "vlmaps.h5df"
-            print(self.map_save_path)
+            logger.debug("Map save path: %s", self.map_save_path)
             if not self.map_save_path.exists():
                 assert False, "Loading VLMap failed because the file doesn't exist."
             (
@@ -87,7 +91,7 @@ class VLMap(Map):
             ) = load_3d_map(self.map_save_path)
         elif self.map_config.pose_info.pose_type == "camera_base":
             self.map_save_path = Path(data_dir) / "vlmap_cam" / "vlmaps_cam.h5df"
-            print(self.map_save_path)
+            logger.debug("Camera map save path: %s", self.map_save_path)
             if not self.map_save_path.exists():
                 assert False, "Loading VLMap failed because the file doesn't exist."
             (
@@ -108,7 +112,7 @@ class VLMap(Map):
 
     def _init_clip(self, clip_version="ViT-B/32"):
         if hasattr(self, "clip_model"):
-            print("clip model is already initialized")
+            logger.debug("clip model is already initialized")
             return
         if torch.cuda.is_available():
             self.device = "cuda"
@@ -127,7 +131,7 @@ class VLMap(Map):
             "ViT-B/16": 512,
             "ViT-L/14": 768,
         }[self.clip_version]
-        print("Loading CLIP model...")
+        logger.info("Loading CLIP model (%s) on %s", self.clip_version, self.device)
         self.clip_model, self.preprocess = clip.load(self.clip_version)  # clip.available_models()
         self.clip_model.to(self.device).eval()
 
@@ -175,7 +179,7 @@ class VLMap(Map):
         if self.obstacles_cropped is None and self.obstacles_map is None:
             self.generate_obstacle_map()
         if not hasattr(self, "clip_model"):
-            print("init_clip in customize obstacle map")
+            logger.info("Initializing CLIP model for customize_obstacle_map")
             self._init_clip()
 
         self.obstacles_new_cropped = get_dynamic_obstacles_map_3d(

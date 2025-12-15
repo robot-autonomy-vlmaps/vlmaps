@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import cv2
 import hydra
@@ -8,7 +9,10 @@ from vlmaps.utils.matterport3d_categories import mp3dcat
 from vlmaps.utils.mapping_utils import (
     cvt_pose_vec2tf,
 )
+from vlmaps.utils.logging_utils import setup_logging
 
+
+logger = logging.getLogger(__name__)
 
 @hydra.main(
     version_base=None,
@@ -49,7 +53,7 @@ def main(config: DictConfig) -> None:
     rgb_map = robot.map.get_rgb_topdown_map_cropped()
     interactive_map.collect_map_positions(rgb_map)
     tf_hab, agent_state = interactive_map.get_habitat_robot_state(interactive_map.coords[0], interactive_map.coords[1])
-    print("habitat_tf: ", tf_hab)
+    logger.info("habitat_tf: %s", tf_hab)
 
     # TEST move to left
     # robot.set_agent_state(tf_hab)
@@ -103,6 +107,7 @@ def main(config: DictConfig) -> None:
     robot.recorded_actions_list = []
     rgb = robot.sim.get_sensor_observations(0)["color_sensor"]
     cv2.imshow("curr obs", rgb)
+    logger.info("Waiting for key input before continuing test primitives")
     cv2.waitKey()
     robot.turn(90)
     robot.turn(-90)
@@ -116,4 +121,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

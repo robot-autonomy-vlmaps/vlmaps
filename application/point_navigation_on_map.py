@@ -1,4 +1,8 @@
+import logging
 import numpy as np
+
+
+logger = logging.getLogger(__name__)
 
 
 def rotation_matrix_x(angle):
@@ -26,4 +30,4 @@ T_rotation_forward = rotation_matrix_z(yaw)
 T_rotation_left = rotation_matrix_x(pitch)
 
 T_new = np.dot(T_rotation_left, T_rotation_forward)
-print(T_new)
+logger.debug("Rotation matrix result:\n%s", T_new)

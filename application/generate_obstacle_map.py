@@ -4,12 +4,16 @@ from tqdm import tqdm
 import hydra
 import open3d as o3d
 import cv2
+import logging
 from scipy.ndimage import distance_transform_edt
 from omegaconf import DictConfig
 from vlmaps.map.vlmap import VLMap
 from vlmaps.utils.matterport3d_categories import mp3dcat
 from vlmaps.robot.lang_robot import LangRobot
 
+from vlmaps.utils.logging_utils import setup_logging
+
+logger = logging.getLogger(__name__)
 
 @hydra.main(
     version_base=None,
@@ -25,6 +29,7 @@ def main(config: DictConfig) -> None:
     obs_map = robot.map.obstacles_cropped
     obs_map = obs_map.astype(np.uint8) * 255
     cv2.imshow("obs_map", obs_map)
+    logger.info("Waiting for user input to continue obstacle map generation")
     cv2.waitKey()
 
     # customize obstacles map
@@ -34,4 +39,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

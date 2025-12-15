@@ -1,7 +1,13 @@
+import logging
+
 import cv2
 import numpy as np
-from vlmaps.utils.clip_utils import get_text_feats, multiple_templates
+
 from vlmaps.llm.factory import get_llm_provider
+from vlmaps.utils.clip_utils import get_text_feats, multiple_templates
+
+
+logger = logging.getLogger(__name__)
 
 def find_similar_category_id(class_name, classes_list):
     if class_name in classes_list:
@@ -43,7 +49,7 @@ def find_similar_category_id(class_name, classes_list):
         ],
     )
 
-    print(text)
+    logger.info("Similar category resolved: %s", text)
     return classes_list.index(text)
 
 
@@ -180,7 +186,7 @@ def get_dynamic_obstacles_map_3d(
             if obs_name == po_obs_name:
                 obs_inds.append(i)
 
-    print("obs_inds: ", obs_inds)
+    logger.debug("Obstacle indices selected: %s", obs_inds)
     pts_mask = np.zeros_like(predict, dtype=bool)
     for id in obs_inds:
         tmp = predict == id
@@ -199,5 +205,6 @@ def get_dynamic_obstacles_map_3d(
 
     if vis:
         cv2.imshow("new obstacles_cropped", (new_obstacles * 255).astype(np.uint8))
+        logger.info("Waiting for key press after showing new obstacles")
         cv2.waitKey()
     return new_obstacles

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, Dict, List, Tuple
 
@@ -15,6 +16,9 @@ from utils.map.map import Map
 from utils.planning_utils import find_similar_category_id, get_segment_islands_pos, mp3dcat, multiple_templates
 
 
+logger = logging.getLogger(__name__)
+
+
 class CLIPMap(Map):
     def __init__(self, map_dir: str, map_config: DictConfig):
         super().__init__(map_config)
@@ -23,7 +27,7 @@ class CLIPMap(Map):
         self.map_cropped = self.map[self.xmin : self.xmax + 1, self.ymin : self.ymax + 1]
         self._init_clip()
         self.load_categories()
-        print("a CLIPMap is created")
+        logger.info("Initialized CLIPMap from %s", map_path)
 
     def _init_clip(self, clip_version="ViT-B/32"):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -38,7 +42,7 @@ class CLIPMap(Map):
             "ViT-B/16": 512,
             "ViT-L/14": 768,
         }[self.clip_version]
-        print("Loading CLIP model...")
+        logger.info("Loading CLIP model (%s) on %s", self.clip_version, self.device)
         self.clip_model, self.preprocess = clip.load(self.clip_version)  # clip.available_models()
         self.clip_model.to(self.device).eval()
 

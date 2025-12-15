@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from subprocess import Popen
@@ -53,6 +54,9 @@ from vlmaps.dataloader.habitat_dataloader import VLMapsDataloaderHabitat
 from typing import Tuple, List
 
 
+logger = logging.getLogger(__name__)
+
+
 class InteractiveMap:
     """
     Display the ground truth semantic top-down map of the scene. User can click on the map
@@ -97,7 +101,7 @@ class InteractiveMap:
         global icol, irow
         if event.button == 1:
             icol, irow = event.xdata, event.ydata
-            print(f"[{icol}, {irow}],")
+            logger.info("Selected point (col,row)=(%s,%s)", icol, irow)
             self.coords.append((icol, irow))
             circle = Circle(
                 (event.xdata, event.ydata),
@@ -111,14 +115,14 @@ class InteractiveMap:
         elif event.button == 2:
             st_id = len(self.coords)
             if st_id > self.start_ids[-1]:
-                print(f"Start selecting the next group of points: {st_id}")
+                logger.info("Start selecting the next group of points: %s", st_id)
                 self.start_ids.append(st_id)
 
         elif event.button == 3:
             coord = self.coords.pop()
             circle = self.circles_list.pop()
             circle.remove()
-            print(f"remove point {coord}")
+            logger.info("Removed point %s", coord)
 
         return self.coords
 
@@ -151,7 +155,7 @@ class InteractiveMap:
             self.ax.axis("off")
             self.ax.imshow(seg_gt)
         elif patches is not None:
-            print(showed_image.shape)
+            logger.debug("Showing image shape: %s", showed_image.shape)
             showed_image = fromarray(showed_image[:, :, :3])
             seg_gt = showed_image.convert("RGBA")
 
@@ -184,14 +188,13 @@ class InteractiveMap:
             mng.window.move(x, y)
 
         mng.resize(1500, 2000)
-        print("starting to show figure")
-        print("(x, y)")
+        logger.info("Starting to show interactive figure; prompting for (x, y)")
         plt.show()
         return self.coords
 
     def _submit(self, expression: str):
         self.instruction = expression
-        print(self.instruction)
+        logger.info("Captured instruction: %s", self.instruction)
 
     def collect_goals_and_instructions(
         self,
@@ -213,14 +216,13 @@ class InteractiveMap:
         ymin = self.vlmaps_dataloader.ymin
         all_group_coords_full = []
         for group_i, (st, ed) in enumerate(start_end_ids):
-            print(st, ed)
+            logger.debug("Processing group coords indices: %s to %s", st, ed)
             group_coords = self.coords[st:ed]  # [(col, row), ...]
             if group_i == 0:
                 src = [group_coords[0][0] / zoom_times, group_coords[0][1] / zoom_times]
                 tar = [group_coords[1][0] / zoom_times, group_coords[1][1] / zoom_times]
                 init_tf_hab, agent_state = self.get_habitat_robot_state(src, tar)
-                print("init cropped pos: ")
-                print(src, tar)
+                logger.info("Init cropped positions src=%s tar=%s", src, tar)
                 continue
             group_coords_full = [[x[1] / zoom_times + xmin, x[0] / zoom_times + ymin] for x in group_coords]
             all_group_coords_full.append(group_coords_full)
@@ -256,8 +258,7 @@ class InteractiveMap:
         Return (4x4 numpy array denoting transformation, robot_state in habitat format)
         """
         theta = np.arctan2(-tar_coord[0] + src_coord[0], -tar_coord[1] + src_coord[1])
-        print("theta: ", theta)
-        print("theta deg: ", np.rad2deg(theta))
+        logger.debug("Computed theta=%s (deg=%s)", theta, np.rad2deg(theta))
         theta_deg = np.rad2deg(theta)
         self.vlmaps_dataloader.from_cropped_map_pose(src_coord[1], src_coord[0], theta_deg)
         tf_hab = self.vlmaps_dataloader.to_habitat_tf()
@@ -464,11 +465,11 @@ class InteractiveMap:
                 continue
 
             nearby_goal = self.sim.pathfinder.snap_point(position)
-            print(f"trying to find path to position {position_i}")
-            print(f"goal position before snap: ", position)
-            print(f"goal position after snap: ", nearby_goal)
-            print(f"current robot position: ", agent.get_state().position)
-            print(f"current robot rotation: ", agent.get_state().rotation)
+            logger.info("Finding path to position %s", position_i)
+            logger.debug("Goal before snap: %s", position)
+            logger.debug("Goal after snap: %s", nearby_goal)
+            logger.debug("Current robot position: %s", agent.get_state().position)
+            logger.debug("Current robot rotation: %s", agent.get_state().rotation)
 
             # try:
             #     actions_list = follower.find_path(nearby_goal)
@@ -478,7 +479,7 @@ class InteractiveMap:
                 try:
                     next_action = follower.next_action_along(nearby_goal)
                 except habitat_sim.errors.GreedyFollowerError:
-                    print("greedy follower error")
+                    logger.warning("Greedy follower error while planning to %s", nearby_goal)
                     break
                 if next_action is None:
                     break
@@ -525,13 +526,13 @@ class InteractiveMap:
             obs = self.sim.step(action)
             agent_state = self.sim.get_agent(0).get_state()
 
-            print(f"saving {self.scene_name} observation {action_i:06}")
+            logger.info("Saving %s observation %06d", self.scene_name, action_i)
             save_obs(save_dir, self.sim_setting, obs, action_i)
             save_state(save_dir, self.sim_setting, agent_state, action_i)
 
     def save_obs_pose(self, save_dir: str, obss: List[dict], poses: List[habitat_sim.AgentState]):
         for action_i, (obs, agent_state) in enumerate(zip(obss, poses)):
-            print(f"saving {self.scene_name} observation {action_i:06}")
+            logger.info("Saving %s observation %06d", self.scene_name, action_i)
             save_obs(save_dir, self.sim_setting, obs, action_i)
             save_state(save_dir, self.sim_setting, agent_state, action_i)
 
@@ -654,7 +655,7 @@ def main(config: DictConfig) -> None:
 
     interactive_map.collect_map_positions(color_top_down)
     tf_hab, agent_state = interactive_map.get_habitat_robot_state(interactive_map.coords[0], interactive_map.coords[1])
-    print("tf_hab: ", tf_hab)
+    logger.info("Initial habitat transform: %s", tf_hab)
 
 
 if __name__ == "__main__":

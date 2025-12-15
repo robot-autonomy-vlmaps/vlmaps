@@ -1,3 +1,4 @@
+import logging
 import os
 from omegaconf import DictConfig
 import hydra
@@ -6,6 +7,10 @@ from vlmaps.task.habitat_object_nav_task import HabitatObjectNavigationTask
 from vlmaps.robot.habitat_lang_robot import HabitatLanguageRobot
 from vlmaps.utils.llm_utils import parse_object_goal_instruction
 from vlmaps.utils.matterport3d_categories import mp3dcat
+from vlmaps.utils.logging_utils import setup_logging
+
+
+logger = logging.getLogger(__name__)
 
 
 @hydra.main(
@@ -34,12 +39,12 @@ def main(config: DictConfig) -> None:
         for task_id in range(len(object_nav_task.task_dict)):
             object_nav_task.setup_task(task_id)
             object_categories = parse_object_goal_instruction(object_nav_task.instruction)
-            print(f"instruction: {object_nav_task.instruction}")
+            logger.info("Instruction: %s", object_nav_task.instruction)
             robot.empty_recorded_actions()
             robot.set_agent_state(object_nav_task.init_hab_tf)
 
             for cat_i, cat in enumerate(object_categories):
-                print(f"Navigating to category {cat}")
+                logger.info("Navigating to category %s", cat)
                 actions_list = robot.move_to_object(cat)
 
             recorded_actions_list = robot.get_recorded_actions()
@@ -54,4 +59,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

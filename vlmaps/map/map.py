@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
@@ -13,6 +14,9 @@ from shapely.geometry import Point, Polygon
 from vlmaps.utils.navigation_utils import get_dist_to_bbox_2d
 
 # from vlmaps.utils.mapping_utils import load_map
+
+
+logger = logging.getLogger(__name__)
 
 
 class Map:
@@ -49,7 +53,7 @@ class Map:
             self.depth_paths = sorted(self.depth_dir.glob("*.npy"))
             self.semantic_paths = sorted(self.semantic_dir.glob("*.npy"))
         except FileNotFoundError as e:
-            print(e)
+            logger.error("Failed to setup paths for data_dir=%s: %s", data_dir, e)
 
     def _setup_transforms(self) -> np.ndarray:
         """
@@ -287,10 +291,10 @@ class Map:
         self, curr_pos: List[float], curr_angle_deg: float, name: str
     ) -> Tuple[List[float], List[float]]:
         contours, centers, bbox_list = self.get_pos(name)
-        print("centers: ", centers)
+        logger.debug("Centers for %s: %s", name, centers)
         centers_cropped = [[x[0] - self.rmin, x[1] - self.cmin] for x in centers]
         ids_list = self.select_front_objs(centers, curr_pos, curr_angle_deg)
-        print("ids_list: ", ids_list)
+        logger.debug("Front object ids: %s", ids_list)
         if not ids_list:
             return None, None
 
@@ -340,7 +344,7 @@ class Map:
                 or (theta > pi_2 and center_angle < -pi_2 and np.abs(2 * np.pi - theta + center_angle) < fov_rad_2)
                 or (theta < -pi_2 and center_angle > pi_2 and np.abs(2 * np.pi - center_angle + theta) < fov_rad_2)
             ):
-                print(theta, center_angle, fov_rad_2)
+                logger.debug("Within FOV: theta=%s center_angle=%s fov/2=%s", theta, center_angle, fov_rad_2)
                 ids_list.append(c_i)
 
         return ids_list
@@ -373,7 +377,7 @@ class Map:
         ids_a_list = self.select_front_objs(centers_a, curr_pos, curr_angle_deg)
         ids_b_list = self.select_front_objs(centers_b, curr_pos, curr_angle_deg)
         if not ids_a_list or not ids_b_list:
-            print(f"Can't find the middle point betwen {obj_a_name} and {obj_b_name}")
+            logger.warning("Can't find the middle point between %s and %s (no front objects)", obj_a_name, obj_b_name)
             return None
 
         contours_a = [contours_a[i] for i in ids_a_list]
@@ -383,7 +387,7 @@ class Map:
         ids_a_list = self.filter_small_objects(front_bbox_list_a)
         ids_b_list = self.filter_small_objects(front_bbox_list_b)
         if not ids_a_list or not ids_b_list:
-            print(f"Can't find the middle point between {obj_a_name} and {obj_b_name}")
+            logger.warning("Can't find the middle point between %s and %s after filtering", obj_a_name, obj_b_name)
             return None
 
         ca = [x for i, x in enumerate(centers_a) if i in ids_a_list]
@@ -412,7 +416,7 @@ class Map:
     def get_left_pos(self, curr_pos: List[float], curr_angle_deg: float, name: str) -> List[float]:
         nearest_center, nearest_bbox = self.get_front_nearest_obj_pos_box(curr_pos, curr_angle_deg, name)
         if nearest_center is None:
-            print("nearest center is None.")
+            logger.warning("Nearest center is None when computing left pos for %s", name)
             return [None, None]
 
         left_pos = self._get_left_pos(curr_pos, nearest_center, nearest_bbox)

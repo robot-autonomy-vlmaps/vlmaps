@@ -1,4 +1,7 @@
+import logging
 import time
+
+logger = logging.getLogger(__name__)
 
 class Tic():
     def __init__(self):
@@ -11,4 +14,4 @@ class Tic():
     
     def print_time(self, process_name: str):
         self.tac()
-        print(f"Process {process_name} takes {self.et - self.st}s.")
+        logger.info("Process %s takes %.3fs.", process_name, self.et - self.st)

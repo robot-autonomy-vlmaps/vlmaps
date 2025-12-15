@@ -5,6 +5,7 @@ import clip
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
+import logging
 
 from argparse import ArgumentParser
 
@@ -22,6 +23,8 @@ import torch.cuda.amp as amp
 import numpy as np
 
 from encoding.utils import SegmentationMetric
+
+logger = logging.getLogger(__name__)
 
 class LSegmentationModule(pl.LightningModule):
     def __init__(self, data_path, dataset, batch_size, base_lr, max_epochs, **kwargs):
@@ -121,18 +124,18 @@ class LSegmentationModule(pl.LightningModule):
             {"params": self.net.pretrained.parameters(), "lr": self.base_lr},
         ]
         if hasattr(self.net, "scratch"):
-            print("Found output scratch")
+            logger.info("Found output scratch")
             params_list.append(
                 {"params": self.net.scratch.parameters(), "lr": self.base_lr * 10}
             )
         if hasattr(self.net, "auxlayer"):
-            print("Found auxlayer")
+            logger.info("Found auxlayer")
             params_list.append(
                 {"params": self.net.auxlayer.parameters(), "lr": self.base_lr * 10}
             )
         if hasattr(self.net, "scale_inv_conv"):
-            print(self.net.scale_inv_conv)
-            print("Found scaleinv layers")
+            logger.debug("scale_inv_conv module: %s", self.net.scale_inv_conv)
+            logger.info("Found scaleinv layers")
             params_list.append(
                 {
                     "params": self.net.scale_inv_conv.parameters(),
@@ -150,7 +153,7 @@ class LSegmentationModule(pl.LightningModule):
             )
 
         if self.other_kwargs["midasproto"]:
-            print("Using midas optimization protocol")
+            logger.info("Using midas optimization protocol")
             
             opt = torch.optim.Adam(
                 params_list,
@@ -192,13 +195,13 @@ class LSegmentationModule(pl.LightningModule):
         )
 
     def get_trainset(self, dset, augment=False, **kwargs):
-        print(kwargs)
-        if augment == True:
+        logger.debug("Trainset kwargs: %s", kwargs)
+        if augment is True:
             mode = "train_x"
         else:
             mode = "train"
 
-        print(mode)
+        logger.info("Creating train dataset '%s' with mode='%s'", dset, mode)
         dset = get_dataset(
             dset,
             root=self.data_path,
@@ -217,12 +220,12 @@ class LSegmentationModule(pl.LightningModule):
         self.val_accuracy = pl.metrics.Accuracy()
         self.val_iou = SegmentationMetric(self.num_classes)
 
-        if augment == True:
+        if augment is True:
             mode = "val_x"
         else:
             mode = "val"
 
-        print(mode)
+        logger.info("Creating validation dataset '%s' with mode='%s'", dset, mode)
         return get_dataset(
             dset,
             root=self.data_path,
