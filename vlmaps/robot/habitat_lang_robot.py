@@ -497,7 +497,7 @@ class HabitatLanguageRobot(LangRobot):
 
             real_actions_list.append(action)
             if vis:
-                self.display_obs(waitkey=True)
+                self.display_obs(waitkey=self.config.nav.waitkey)
                 self.display_curr_pos_on_map(map)
             if poses_list is None:
                 continue
