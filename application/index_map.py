@@ -1,7 +1,10 @@
+import logging
 from pathlib import Path
+
 import hydra
 from omegaconf import DictConfig
 from vlmaps.map.vlmap import VLMap
+from vlmaps.utils.logging_utils import setup_logging
 from vlmaps.utils.matterport3d_categories import mp3dcat
 from vlmaps.utils.visualize_utils import (
     pool_3d_label_to_2d,
@@ -16,6 +19,9 @@ from vlmaps.utils.visualize_utils import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @hydra.main(
     version_base=None,
     config_path="../config",
@@ -24,16 +30,16 @@ from vlmaps.utils.visualize_utils import (
 def main(config: DictConfig) -> None:
     data_dir = Path(config.data_paths.vlmaps_data_dir)
     data_dirs = sorted([x for x in data_dir.iterdir() if x.is_dir()])
-    print(data_dirs[config.scene_id])
+    logger.info("Indexing scene at %s", data_dirs[config.scene_id])
     vlmap = VLMap(config.map_config, data_dir=data_dirs[config.scene_id])
     vlmap.load_map(data_dirs[config.scene_id])
     visualize_rgb_map_3d(vlmap.grid_pos, vlmap.grid_rgb)
+    logger.info("Awaiting user input for category selection")
     cat = input("What is your interested category in this scene?")
     # cat = "chair"
 
     vlmap._init_clip()
-    print("considering categories: ")
-    print(mp3dcat[1:-1])
+    logger.info("Considering categories: %s", mp3dcat[1:-1])
     if config.init_categories:
         vlmap.init_categories(mp3dcat[1:-1])
         mask = vlmap.index_map(cat, with_init_cat=True)
@@ -55,4 +61,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

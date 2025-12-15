@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import hydra
@@ -5,8 +6,11 @@ import numpy as np
 from omegaconf import DictConfig
 import habitat_sim
 from vlmaps.utils.habitat_utils import *
+from vlmaps.utils.logging_utils import setup_logging
 
 
+
+logger = logging.getLogger(__name__)
 @hydra.main(
     version_base=None,
     config_path="../../config",
@@ -26,8 +30,8 @@ def main(config: DictConfig) -> None:
             if not scene_dir.exists():
                 break
             id += 1
-        print(f"Collecting data for scene {scene_name}")
-        print(f"Data will be saved at {scene_dir}")
+        logger.info("Collecting data for scene %s", scene_name)
+        logger.info("Data will be saved at %s", scene_dir)
         scene_dir.mkdir(parents=True, exist_ok=True)
         scene_dirs.append(scene_dir)
 
@@ -74,9 +78,12 @@ def main(config: DictConfig) -> None:
         objs = scene.objects
         levels = scene.levels
         for level in levels:
-            print(level.id, level.aabb.center, level.aabb.sizes)
-            print(
-                level.id, level.aabb.center[1] - level.aabb.sizes[1] / 2, level.aabb.center[1] + level.aabb.sizes[1] / 2
+            logger.debug("Level %s center=%s sizes=%s", level.id, level.aabb.center, level.aabb.sizes)
+            logger.debug(
+                "Level %s y-range: %s %s",
+                level.id,
+                level.aabb.center[1] - level.aabb.sizes[1] / 2,
+                level.aabb.center[1] + level.aabb.sizes[1] / 2,
             )
         # for obj in objs:
         #     print(obj.id, obj.region.category.name(), obj.category.name(), obj.obb.center, obj.obb.sizes)
@@ -95,7 +102,7 @@ def main(config: DictConfig) -> None:
         agent.set_state(agent_state)
 
         agent_state = agent.get_state()
-        print("agent_state: position", agent_state.position, "rotation", agent_state.rotation)
+        logger.info("Agent state: position=%s rotation=%s", agent_state.position, agent_state.rotation)
 
         init_agent_state = agent_state
         actions_list = []
@@ -122,7 +129,7 @@ def main(config: DictConfig) -> None:
                 else:
                     release_count += 1
                     if release_count > 1:
-                        print("stop after release")
+                        logger.info("Stopping after key release")
                         last_action = None
                         release_count = 0
                         continue
@@ -141,17 +148,17 @@ def main(config: DictConfig) -> None:
         # save_state(root_save_dir, sim_setting, agent.get_state(), 0)
         agent_states.append(agent.get_state())
 
-        print(f"saving frame 0/{len(actions_list) + 1}...")
+        logger.info("Saving frame 0/%s", len(actions_list) + 1)
 
         for action_i, action in enumerate(actions_list):
             obs = sim.step(action)
             agent = sim.get_agent(0)
-            print(f"saving frame {action_i + 1}/{len(actions_list) + 1}...")
+            logger.info("Saving frame %s/%s", action_i + 1, len(actions_list) + 1)
             save_obs(root_save_dir, sim_setting, obs, action_i + 1, obj2cls)
             agent_states.append(agent.get_state())
         save_states(root_save_dir, agent_states)
 
 
 if __name__ == "__main__":
-
+    setup_logging()
     main()
