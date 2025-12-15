@@ -96,6 +96,7 @@ def visualize_heatmap_2d(rgb: np.ndarray, heatmap: np.ndarray, transparency: flo
     Args:
         rgb (np.ndarray): (gs, gs, 3) element range [0, 255] np.uint8
         heatmap (np.ndarray): (gs, gs) element range [0, 1] np.float32
+        waitkey (bool, optional): If True, waits for a key press to proceed. If False, proceeds automatically. Defaults to False.
     """
     sim_new = (heatmap * 255).astype(np.uint8)
     heat = cv2.applyColorMap(sim_new, cv2.COLORMAP_JET)
