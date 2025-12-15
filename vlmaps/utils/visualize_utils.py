@@ -78,7 +78,7 @@ def get_heatmap_from_mask_2d(mask: np.ndarray, cell_size: float = 0.05, decay_ra
     return heatmap
 
 
-def visualize_rgb_map_2d(rgb: np.ndarray):
+def visualize_rgb_map_2d(rgb: np.ndarray, waitkey: bool = False):
     """visualize rgb image
 
     Args:
@@ -87,28 +87,29 @@ def visualize_rgb_map_2d(rgb: np.ndarray):
     rgb = rgb.astype(np.uint8)
     bgr = rgb[:, :, ::-1]
     cv2.imshow("rgb map", bgr)
-    cv2.waitKey(0)
+    cv2.waitKey(0 if waitkey else 1)
 
 
-def visualize_heatmap_2d(rgb: np.ndarray, heatmap: np.ndarray, transparency: float = 0.5):
+def visualize_heatmap_2d(rgb: np.ndarray, heatmap: np.ndarray, transparency: float = 0.5, waitkey: bool = False):
     """visualize heatmap
 
     Args:
         rgb (np.ndarray): (gs, gs, 3) element range [0, 255] np.uint8
         heatmap (np.ndarray): (gs, gs) element range [0, 1] np.float32
+        waitkey (bool, optional): If True, waits for a key press to proceed. If False, proceeds automatically. Defaults to False.
     """
     sim_new = (heatmap * 255).astype(np.uint8)
     heat = cv2.applyColorMap(sim_new, cv2.COLORMAP_JET)
     heat = heat[:, :, ::-1].astype(np.float32)  # convert to RGB
     heat_rgb = heat * transparency + rgb * (1 - transparency)
-    visualize_rgb_map_2d(heat_rgb)
+    visualize_rgb_map_2d(heat_rgb, waitkey=waitkey)
 
 
-def visualize_masked_map_2d(rgb: np.ndarray, mask: np.ndarray):
+def visualize_masked_map_2d(rgb: np.ndarray, mask: np.ndarray, waitkey: bool = False):
     """visualize masked map
 
     Args:
         rgb (np.ndarray): (gs, gs, 3) element range [0, 255] np.uint8
         mask (np.ndarray): (gs, gs) element range [0, 1] np.uint8
     """
-    visualize_heatmap_2d(rgb, mask.astype(np.float32))
+    visualize_heatmap_2d(rgb, mask.astype(np.float32), waitkey=waitkey)

@@ -7,7 +7,8 @@ nav:
   valid_range: 1
   vis: True
   tasks_per_scene: 20
-scene_id: 0
+  waitkey: False
+scene_id: 3
 
 # indexing params
 decay_rate: 0.01

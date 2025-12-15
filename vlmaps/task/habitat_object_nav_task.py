@@ -97,7 +97,7 @@ class HabitatObjectNavigationTask(HabitatTask):
             sim.step(action)
             if vis:
                 obs = sim.get_sensor_observations(0)
-                display_sample({}, obs["color_sensor"], waitkey=True)
+                display_sample({}, obs["color_sensor"], waitkey=self.config.nav.waitkey)
         if self.is_task_finished():
             self.n_tot_tasks += 1
             self.n_tot_subgoals += self.n_subgoals_in_task

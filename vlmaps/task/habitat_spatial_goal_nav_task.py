@@ -56,7 +56,7 @@ class HabitatSpatialGoalNavigationTask(HabitatTask):
             sim.step(action)
             if vis:
                 obs = sim.get_sensor_observations(0)
-                display_sample({}, obs["color_sensor"], waitkey=True)
+                display_sample({}, obs["color_sensor"], waitkey=self.config.nav.waitkey)
         if self.curr_subgoal_id >= len(self.goals):
             return
         if agent_map_position is None:
