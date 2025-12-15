@@ -641,7 +641,7 @@ class InteractiveMap:
     config_name="test_config.yaml",
 )
 def main(config: DictConfig) -> None:
-    data_dir = Path(config.data_paths.vlmaps_data_dir) / "vlmaps_dataset"
+    data_dir = Path(config.data_paths.vlmaps_data_dir)
     data_dirs = sorted([x for x in data_dir.iterdir() if x.is_dir()])
     interactive_map = InteractiveMap(data_dirs[config.scene_id], config.map_config)
     # obstacle_cropped = interactive_map.vlmaps_dataloader.get_obstacles_cropped()
