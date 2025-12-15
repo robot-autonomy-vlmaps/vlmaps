@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 import numpy as np
@@ -16,6 +17,7 @@ from vlmaps.map.map import Map
 # from utils.utils import *
 
 from typing import Tuple, List, Dict, Optional, Union
+logger = logging.getLogger(__name__)
 
 
 class VLMapsDataloaderHabitat:
@@ -159,16 +161,16 @@ def main(config: DictConfig) -> None:
         base_hab_tf = cvt_pose_vec2tf(dataloader.base_poses[i])
         dataloader.from_habitat_tf(base_hab_tf)
         full_map_pose = dataloader.to_full_map_pose()
-        print("full map pose: ", full_map_pose)
+        logger.info("Full map pose: %s", full_map_pose)
         dataloader.from_full_map_pose(*full_map_pose)
         cvt_hab_tf = dataloader.to_habitat_tf()
-        print("The correct habitat tf is: \n", base_hab_tf)
-        print("The converted habitat tf is: \n", cvt_hab_tf)
+        logger.debug("Correct habitat tf:\n%s", base_hab_tf)
+        logger.debug("Converted habitat tf:\n%s", cvt_hab_tf)
 
         err = np.linalg.norm(base_hab_tf - cvt_hab_tf)
-        print(f"Error: {err}")
+        logger.info("Pose round-trip error: %s", err)
         assert err < 1, "[TEST RESULTS]: FAIL! The converted habitat tf is not correct."
-        print(f"[TEST RESULTS]: PASS {test_i+1}/{len(ids_list)}!")
+        logger.info("[TEST RESULTS]: PASS %s/%s", test_i + 1, len(ids_list))
 
 
 if __name__ == "__main__":

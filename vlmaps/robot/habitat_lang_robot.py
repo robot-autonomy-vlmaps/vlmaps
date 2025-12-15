@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from vlmaps.dataloader.habitat_dataloader import VLMapsDataloaderHabitat
 from vlmaps.navigator.navigator import Navigator
 from vlmaps.controller.discrete_nav_controller import DiscreteNavController
 
+from vlmaps.utils.logging_utils import setup_logging
 from vlmaps.utils.mapping_utils import (
     grid_id2base_pos_3d,
     grid_id2base_pos_3d_batch,
@@ -28,6 +30,7 @@ from vlmaps.utils.matterport3d_categories import mp3dcat
 
 from typing import List, Tuple, Dict, Any, Union
 
+logger = logging.getLogger(__name__)
 
 class HabitatLanguageRobot(LangRobot):
     """
@@ -70,7 +73,7 @@ class HabitatLanguageRobot(LangRobot):
         """
         self.scene_id = scene_id
         vlmaps_data_dir = self.vlmaps_data_save_dirs[scene_id]
-        print(vlmaps_data_dir)
+        logger.info("Setting up scene %s at %s", scene_id, vlmaps_data_dir)
         self.scene_name = vlmaps_data_dir.name.split("_")[0]
 
         self._setup_sim(self.scene_name)
@@ -79,7 +82,11 @@ class HabitatLanguageRobot(LangRobot):
 
         cropped_obst_map = self.map.get_obstacle_cropped()
         if self.config.map_config.potential_obstacle_names and self.config.map_config.obstacle_names:
-            print("come here")
+            logger.info(
+                "Customizing obstacle map with potential_obstacle_names=%s obstacle_names=%s",
+                self.config.map_config.potential_obstacle_names,
+                self.config.map_config.obstacle_names,
+            )
             self.map.customize_obstacle_map(
                 self.config.map_config.potential_obstacle_names,
                 self.config.map_config.obstacle_names,
@@ -396,7 +403,7 @@ class HabitatLanguageRobot(LangRobot):
         cv2.imshow(f"heatmap_{name}", target_heatmap)
 
     def _vis_dist_map_3d(self, heatmap: np.ndarray, transparency: float = 0.3, name: str = ""):
-        print(f"heatmap of {name}")
+        logger.info("Visualizing 3D distance heatmap for %s", name)
         sim_new = (heatmap * 255).astype(np.uint8)
         rgb_pc = cv2.applyColorMap(sim_new, cv2.COLORMAP_JET)
         rgb_pc = rgb_pc.reshape(-1, 3)[:, ::-1].astype(np.float32) / 255.0
@@ -432,7 +439,7 @@ class HabitatLanguageRobot(LangRobot):
         """
         # Guard against invalid targets (e.g., object not found / middle point unavailable)
         if pos is None or any(p is None for p in pos):
-            print("move_to: target position is invalid; skipping navigation.")
+            logger.warning("move_to: target position is invalid; skipping navigation. pos=%s", pos)
             return []
 
         actual_actions_list = []
@@ -443,7 +450,7 @@ class HabitatLanguageRobot(LangRobot):
         paths = self.nav.plan_to(
             curr_pose_on_full_map[:2], pos, vis=self.config["nav"]["vis"]
         )  # take (row, col) in full map
-        print(paths)
+        logger.debug("Planned path with %d waypoints", len(paths))
         actions_list, poses_list = self.controller.convert_paths_to_actions(curr_pose_on_full_map, paths[1:])
         success, real_actions_list = self.execute_actions(actions_list, poses_list, vis=self.config["nav"]["vis"])
         actual_actions_list.extend(real_actions_list)
@@ -542,7 +549,7 @@ class HabitatLanguageRobot(LangRobot):
         row, col, angle_deg = self.vlmaps_dataloader.to_full_map_pose()
         self.curr_pos_on_map = (row, col)
         self.curr_ang_deg_on_map = angle_deg
-        print("set curr pose: ", row, col, angle_deg)
+        logger.debug("Current pose on map set to row=%s col=%s angle_deg=%s", row, col, angle_deg)
 
     def _get_full_map_pose(self) -> Tuple[float, float, float]:
         agent_state = self.sim.get_agent(0).get_state()
@@ -583,7 +590,7 @@ class HabitatLanguageRobot(LangRobot):
         elif hasattr(self, "goal_bboxes"):
             map = self.display_goal_bboxes_on_map(map, color)
         else:
-            print("no goal tfs or bboxes passed to the robot.")
+            logger.warning("No goal transforms or bounding boxes passed to the robot; nothing to draw")
         return map
 
     def display_goal_bboxes_on_map(
@@ -613,7 +620,7 @@ class HabitatLanguageRobot(LangRobot):
     ) -> np.ndarray:
         if self.goal_tfs is None:
             if self.all_goal_tfs is None:
-                print("no goal tfs passed to the robot")
+                logger.warning("No goal transforms available to draw on map")
                 return map
             self.goal_tfs = self.all_goal_tfs[self.goal_id]
             self.goal_id += 1
@@ -660,4 +667,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

@@ -1,3 +1,4 @@
+import logging
 import os
 import pickle
 import numpy as np
@@ -8,6 +9,7 @@ from vlmaps.map.map import Map
 
 from typing import List, Tuple, Dict, Any
 
+logger = logging.getLogger(__name__)
 
 class LangRobot:
     """
@@ -92,7 +94,7 @@ class LangRobot:
         """
         contours, centers, bbox_list = self.map.get_pos(name)
         if not centers:
-            print(f"no objects {name} detected")
+            logger.warning("No objects %s detected; returning current position", name)
             return self.curr_pos_on_map
         ids = self.map.filter_small_objects(bbox_list)
         if ids:
@@ -109,7 +111,7 @@ class LangRobot:
         """
         contours, centers, bbox_list = self.map.get_pos(name)
         if not centers:
-            print(f"no objects {name} detected")
+            logger.error("No objects %s detected; cannot get contour", name)
             assert False
         ids = self.map.filter_small_objects(bbox_list)
         if ids:

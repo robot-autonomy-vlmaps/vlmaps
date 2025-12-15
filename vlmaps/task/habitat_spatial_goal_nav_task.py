@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 from typing import Dict, List, Tuple, Union
+import logging
 
 from omegaconf import DictConfig
 import numpy as np
@@ -11,6 +12,8 @@ from vlmaps.task.habitat_task import HabitatTask
 from vlmaps.utils.habitat_utils import agent_state2tf, get_position_floor_objects
 from vlmaps.utils.navigation_utils import get_dist_to_bbox_2d
 from vlmaps.utils.habitat_utils import display_sample
+
+logger = logging.getLogger(__name__)
 
 
 class HabitatSpatialGoalNavigationTask(HabitatTask):
@@ -77,7 +80,7 @@ class HabitatSpatialGoalNavigationTask(HabitatTask):
         row, col = agent_map_position
 
         min_dist = np.inf
-        print(f"testing the {self.curr_subgoal_id + 1} stop.")
+        logger.info("Testing subgoal %s/%s", self.curr_subgoal_id + 1, self.n_subgoals_in_task)
         targets = self.goals[self.curr_subgoal_id]
         for pos in targets:
             trow, tcol = pos[0], pos[1]
@@ -87,8 +90,8 @@ class HabitatSpatialGoalNavigationTask(HabitatTask):
         if min_dist < self.config.nav.valid_range / self.vlmaps_dataloader.cs:
             self.finished_subgoals.append(self.curr_subgoal_id)
             self.n_success_subgoals += 1
-            print(f"Target reached! Distance: {min_dist}pix.")
-        print(f"min dist to target: {min_dist}pix")
+            logger.info("Target reached! Distance: %spix.", min_dist)
+        logger.debug("Min distance to target: %spix", min_dist)
         self.distance_to_subgoals.append(min_dist * self.vlmaps_dataloader.cs)
 
         self.curr_subgoal_id += 1
@@ -139,7 +142,7 @@ def main(config: DictConfig) -> None:
     task.setup_scene(dataloader)
     task.load_task()
     task.setup_task(0)
-    print(task.goals)
+    logger.debug("Goals: %s", task.goals)
 
 
 if __name__ == "__main__":
