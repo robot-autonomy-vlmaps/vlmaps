@@ -13,6 +13,7 @@ from application.evaluation.compute_spatial_goal_navigation_metrics import main 
 from application.evaluation.evaluate_object_goal_navigation import main as eval_object_goal_nav_main
 from application.evaluation.evaluate_spatial_goal_navigation import main as eval_spatial_goal_nav_main
 from application.index_map import main as index_map_main
+from vlmaps.utils.logging_utils import setup_logging
 
 
 CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
@@ -34,6 +35,9 @@ app = typer.Typer(help="VLMAPS command-line interface")
 dataset_app = typer.Typer(help="Dataset workflows")
 map_app = typer.Typer(help="Map workflows")
 eval_app = typer.Typer(help="Evaluation workflows")
+
+# Configure logging once for all CLI commands
+setup_logging()
 
 
 @dataset_app.command("collect", help="Collect dataset")
