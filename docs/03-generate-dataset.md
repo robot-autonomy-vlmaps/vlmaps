@@ -64,8 +64,7 @@ nano config/generate_dataset.yaml
 Run the dataset generation script:
 
 ```bash
-cd application/dataset
-python generate_dataset.py
+vlmaps dataset generate
 ```
 
 ### What Happens
@@ -150,7 +149,7 @@ data_cfg:
 If you want to collect your own data in Habitat-Sim:
 
 ```bash
-python application/dataset/collect_custom_dataset.py scene_names=["gTV8FGcVJC9"]
+vlmaps dataset collect scene_names=["gTV8FGcVJC9"]
 ```
 
 This will create a new folder `<scene_name>_<id>` under `vlmaps_data_dir`. The `<id>` is automatically incremented if folders already exist.

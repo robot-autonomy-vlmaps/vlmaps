@@ -58,8 +58,7 @@ scene_id: 0              # Scene to evaluate (or [0,1,2] for multiple)
 ### Run Object Goal Navigation
 
 ```bash
-cd application/evaluation
-python evaluate_object_goal_navigation.py
+vlmaps eval object
 ```
 
 ### What Happens
@@ -74,8 +73,7 @@ python evaluate_object_goal_navigation.py
 After evaluation, compute final metrics:
 
 ```bash
-cd application/evaluation
-python compute_object_goal_navigation_metrics.py
+vlmaps eval object-compute
 ```
 
 This will output success rate, SPL (Success weighted by Path Length), and other navigation metrics.
@@ -111,8 +109,7 @@ scene_id: 0              # Scene to evaluate (or [0,1,2] for multiple)
 ### Run Spatial Goal Navigation
 
 ```bash
-cd application/evaluation
-python evaluate_spatial_goal_navigation.py
+vlmaps eval spatial
 ```
 
 ### What Happens
@@ -127,8 +124,7 @@ python evaluate_spatial_goal_navigation.py
 After evaluation, compute final metrics:
 
 ```bash
-cd application/evaluation
-python compute_spatial_goal_navigation_metrics.py
+vlmaps eval spatial-compute
 ```
 
 ## Visualization

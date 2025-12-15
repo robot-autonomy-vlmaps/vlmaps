@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 description = ["Visual Language Maps for Robot Navigation"]
 
@@ -14,7 +14,7 @@ version = "0.0"
 setup(
     name="vlmaps",
     version=version,
-    packages=["vlmaps"],
+    packages=find_packages(include=["vlmaps", "application", "application.*"]),
     python_requires=">=3.8",
     author="Chenguang Huang",
     description=description,
@@ -26,4 +26,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    entry_points={"console_scripts": ["vlmaps=cli:app"]},
 )
