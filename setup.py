@@ -15,6 +15,7 @@ setup(
     name="vlmaps",
     version=version,
     packages=find_packages(include=["vlmaps", "application", "application.*"]),
+    py_modules=["cli"],
     python_requires=">=3.8",
     author="Chenguang Huang",
     description=description,
