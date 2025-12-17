@@ -1,4 +1,5 @@
 import logging
+import multiprocessing as mp
 import numpy as np
 import open3d as o3d
 import cv2
@@ -14,6 +15,18 @@ def visualize_rgb_map_3d(pc: np.ndarray, rgb: np.ndarray):
     pcd.points = o3d.utility.Vector3dVector(pc)
     pcd.colors = o3d.utility.Vector3dVector(grid_rgb)
     o3d.visualization.draw_geometries([pcd])
+
+
+def visualize_rgb_map_3d_async(pc: np.ndarray, rgb: np.ndarray) -> None:
+    """Spawn a separate process to show a 3D point cloud so the caller is not blocked."""
+    try:
+        ctx = mp.get_context("spawn")
+    except ValueError:
+        ctx = mp
+    # Call the standard blocking viewer in a child process so callers are not blocked.
+    p = ctx.Process(target=visualize_rgb_map_3d, args=(pc, rgb))
+    p.daemon = False
+    p.start()
 
 
 def get_heatmap_from_mask_3d(
