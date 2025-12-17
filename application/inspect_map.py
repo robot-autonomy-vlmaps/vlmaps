@@ -57,7 +57,7 @@ def show_obstacle_map_3d(vlmap: VLMap, h_min: float = 0.0, h_max: float = 1.5) -
         return
 
     heights = np.arange(0, vlmap.occupied_ids.shape[-1]) * vlmap.cs
-    height_mask = np.logical_and(heights > h_min, heights < h_max)
+    height_mask = np.logical_and(heights >= h_min, heights <= h_max)
     occ_volume = vlmap.occupied_ids[..., height_mask] > 0  # (gs, gs, vh_sub)
 
     if not np.any(occ_volume):
