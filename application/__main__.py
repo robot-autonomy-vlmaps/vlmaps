@@ -13,6 +13,7 @@ from application.evaluation.compute_spatial_goal_navigation_metrics import main 
 from application.evaluation.evaluate_object_goal_navigation import main as eval_object_goal_nav_main
 from application.evaluation.evaluate_spatial_goal_navigation import main as eval_spatial_goal_nav_main
 from application.index_map import main as index_map_main
+from application.inspect_map import main as inspect_map_main
 from vlmaps.utils.logging_utils import setup_logging
 
 
@@ -58,6 +59,11 @@ def map_create(overrides: Optional[List[str]] = typer.Argument(None, help="Hydra
 @map_app.command("index", help="Index a map")
 def map_index(overrides: Optional[List[str]] = typer.Argument(None, help="Hydra overrides, e.g., scene_id=0")) -> None:
     _compose_and_call(index_map_main, "map_indexing_cfg.yaml", overrides)
+
+
+@map_app.command("inspect", help="Inspect a map (obstacles + landmark indexing)")
+def map_inspect(overrides: Optional[List[str]] = typer.Argument(None, help="Hydra overrides, e.g., scene_id=0")) -> None:
+    _compose_and_call(inspect_map_main, "inspect_map_cfg.yaml", overrides)
 
 
 @eval_app.command("object", help="Run object-goal navigation evaluation")
