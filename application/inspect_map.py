@@ -209,25 +209,20 @@ def show_category_map_3d(pred: np.ndarray, label_names: List[str], vlmap: VLMap)
 def main(config: DictConfig) -> None:
     """Inspect a VLMap in 2D or 3D mode."""
     vlmap = load_scene_vlmap(config)
-    # Determine mode: explicit config.mode overrides legacy vis_3d flag
-    mode = getattr(config, "mode", None)
-    if mode is None:
-        mode = "3d" if getattr(config, "vis_3d", False) else "2d"
+    # Use a simple boolean flag: vis_3d = True for 3D, False for 2D
+    vis_3d = bool(getattr(config, "vis_3d", False))
 
-    if mode == "2d":
+    if not vis_3d:
         show_obstacle_map(vlmap, config.obs.height.min, config.obs.height.max)
         labels_cropped, label_names, _ = compute_category_map(vlmap)
         show_category_map(labels_cropped, label_names)
-    elif mode == "3d":
+    else:
         show_obstacle_map_3d(vlmap, config.obs.height.min, config.obs.height.max)
         _, label_names, pred = compute_category_map(vlmap)
         show_category_map_3d(pred, label_names, vlmap)
-    else:
-        logger.error("Unknown inspect_map mode='%s'. Use '2d' or '3d'.", mode)
 
 
 if __name__ == "__main__":
     setup_logging()
     main()
-
 

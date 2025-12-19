@@ -11,4 +11,4 @@ obs:
     min: 0.1 # minimum height (m) for obstacle voxels
     max: 0.8 # maximum height (m) for obstacle voxels
 
-mode: '2d' # "2d" or "3d"
+vis_3d: true # false for 2D
