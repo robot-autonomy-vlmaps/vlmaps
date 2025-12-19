@@ -1,9 +1,11 @@
 import logging
+import multiprocessing as mp
 import numpy as np
 import open3d as o3d
 import cv2
 from tqdm import tqdm
 from scipy.ndimage import distance_transform_edt
+from scipy.spatial import cKDTree
 
 logger = logging.getLogger(__name__)
 
@@ -16,27 +18,64 @@ def visualize_rgb_map_3d(pc: np.ndarray, rgb: np.ndarray):
     o3d.visualization.draw_geometries([pcd])
 
 
+def visualize_rgb_map_3d_async(pc: np.ndarray, rgb: np.ndarray) -> None:
+    """Spawn a separate process to show a 3D point cloud so the caller is not blocked."""
+    try:
+        ctx = mp.get_context("spawn")
+    except ValueError:
+        ctx = mp
+    # Call the standard blocking viewer in a child process so callers are not blocked.
+    p = ctx.Process(target=visualize_rgb_map_3d, args=(pc, rgb))
+    p.daemon = False
+    p.start()
+
+
 def get_heatmap_from_mask_3d(
     pc: np.ndarray, mask: np.ndarray, cell_size: float = 0.05, decay_rate: float = 0.01
 ) -> np.ndarray:
+    """Compute a 3D heatmap from a boolean mask using KD-tree for efficient nearest neighbor search.
+    
+    Args:
+        pc: Point cloud array of shape (N, 3)
+        mask: Boolean mask of shape (N,) indicating target points
+        cell_size: Cell size in meters for distance normalization
+        decay_rate: Rate at which heat decays with distance
+        
+    Returns:
+        Heatmap array of shape (N,) with values in [0, 1]
+    """
     target_pc = pc[mask, :]
     other_ids = np.where(mask == 0)[0]
     other_pc = pc[other_ids, :]
 
-    target_sim = np.ones((target_pc.shape[0], 1))
-    other_sim = np.zeros((other_pc.shape[0], 1))
-    pbar = tqdm(other_pc, desc="Computing heat", total=other_pc.shape[0])
-    for other_p_i, p in enumerate(pbar):
-        dist = np.linalg.norm(target_pc - p, axis=1) / cell_size
-        min_dist_i = np.argmin(dist)
-        min_dist = dist[min_dist_i]
-        other_sim[other_p_i] = np.clip(1 - min_dist * decay_rate, 0, 1)
+    # Handle edge cases
+    if target_pc.shape[0] == 0:
+        # No targets, all zeros
+        heatmap = np.zeros((pc.shape[0],), dtype=np.float32)
+        return heatmap
+    
+    if other_pc.shape[0] == 0:
+        # All targets, all ones
+        heatmap = np.ones((pc.shape[0],), dtype=np.float32)
+        return heatmap
 
-    new_pc = pc.copy()
-    heatmap = np.ones((new_pc.shape[0], 1), dtype=np.float32)
-    for s_i, s in enumerate(other_sim):
-        heatmap[other_ids[s_i]] = s
-    return heatmap.flatten()
+    # Build KD-tree from target points for efficient nearest neighbor search
+    logger.debug("Building KD-tree from %d target points", target_pc.shape[0])
+    tree = cKDTree(target_pc)
+    
+    # Query nearest neighbor distances for all other points
+    logger.debug("Querying nearest neighbors for %d other points", other_pc.shape[0])
+    min_dists, _ = tree.query(other_pc, k=1)  # k=1 means we only need the nearest neighbor
+    
+    # Normalize distances by cell_size and compute heat values
+    min_dists_normalized = min_dists / cell_size
+    other_sim = np.clip(1.0 - min_dists_normalized * decay_rate, 0.0, 1.0)
+
+    # Assemble final heatmap: targets get 1.0, others get decayed similarity
+    heatmap = np.ones((pc.shape[0],), dtype=np.float32)
+    heatmap[other_ids] = other_sim
+    
+    return heatmap
 
 
 def visualize_masked_map_3d(pc: np.ndarray, mask: np.ndarray, rgb: np.ndarray, transparency: float = 0.5):

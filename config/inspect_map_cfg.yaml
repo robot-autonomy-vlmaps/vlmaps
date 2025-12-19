@@ -1,0 +1,14 @@
+defaults:
+  - data_paths: default
+  - map_config: vlmaps
+  - params: default
+  - _self_
+
+scene_id: 0
+
+obs:
+  height:
+    min: 0.1 # minimum height (m) for obstacle voxels
+    max: 0.8 # maximum height (m) for obstacle voxels
+
+vis_3d: true # false for 2D
