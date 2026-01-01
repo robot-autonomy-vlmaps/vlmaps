@@ -110,6 +110,8 @@ def main(config: DictConfig) -> None:
     if config.nav.waitkey:
         logger.info("Waiting for key input before continuing test primitives")
         cv2.waitKey()
+    else:
+        cv2.waitKey(1)
     robot.turn(90)
     robot.turn(-90)
     robot.move_to_object("counter")

@@ -32,6 +32,8 @@ def main(config: DictConfig) -> None:
     if config.nav.waitkey:
         logger.info("Waiting for user input to continue obstacle map generation")
         cv2.waitKey()
+    else:
+        cv2.waitKey(1)
 
     # customize obstacles map
     robot.map.customize_obstacle_map(
