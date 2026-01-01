@@ -8,24 +8,16 @@ class OpenAIProvider(LLMProvider):
         self.cfg = config
         self.client = openai.OpenAI(api_key=api_key, base_url=config.base_url, timeout=config.timeout)
 
-    def parse_object_goal_instruction(self, messages: List[Dict[str, str]]) -> str:
-        cfg = self.cfg.parse_object_goal_instruction
-        response = self.client.chat.completions.create(
-            **cfg,
-            messages=messages,
-        )
-        return response.choices[0].message.content
-
-    def parse_spatial_instruction(self, messages: List[Dict[str, str]]) -> str:
-        cfg = self.cfg.parse_spatial_instruction
-        response = self.client.chat.completions.create(
-            **cfg,
-            messages=messages,
-        )
-        return response.choices[0].message.content
-
     def find_similar_category(self, messages: List[Dict[str, str]]) -> str:
         cfg = self.cfg.find_similar_category
+        response = self.client.chat.completions.create(
+            **cfg,
+            messages=messages,
+        )
+        return response.choices[0].message.content
+
+    def parse_instruction(self, messages: List[Dict[str, str]]) -> str:
+        cfg = self.cfg.parse_instruction
         response = self.client.chat.completions.create(
             **cfg,
             messages=messages,

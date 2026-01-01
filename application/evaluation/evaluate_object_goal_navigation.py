@@ -5,7 +5,7 @@ import hydra
 
 from vlmaps.task.habitat_object_nav_task import HabitatObjectNavigationTask
 from vlmaps.robot.habitat_lang_robot import HabitatLanguageRobot
-from vlmaps.utils.llm_utils import parse_object_goal_instruction
+from vlmaps.utils.llm_utils import parse_instruction
 from vlmaps.utils.matterport3d_categories import mp3dcat
 from vlmaps.utils.logging_utils import setup_logging
 
@@ -38,14 +38,15 @@ def main(config: DictConfig) -> None:
 
         for task_id in range(len(object_nav_task.task_dict)):
             object_nav_task.setup_task(task_id)
-            object_categories = parse_object_goal_instruction(object_nav_task.instruction)
+            result_code = parse_instruction(object_nav_task.instruction)
             logger.info("Instruction: %s", object_nav_task.instruction)
             robot.empty_recorded_actions()
             robot.set_agent_state(object_nav_task.init_hab_tf)
 
-            for cat_i, cat in enumerate(object_categories):
-                logger.info("Navigating to category %s", cat)
-                actions_list = robot.move_to_object(cat)
+            for line in result_code.split("\n"):
+                logger.info("Evaluating line: %s", line)
+                if line:
+                    eval(line)
 
             recorded_actions_list = robot.get_recorded_actions()
             robot.set_agent_state(object_nav_task.init_hab_tf)

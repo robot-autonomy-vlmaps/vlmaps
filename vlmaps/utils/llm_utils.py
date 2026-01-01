@@ -40,101 +40,20 @@ def _sanitize_spatial_code(output: str) -> str:
 
     return "\n".join(kept_lines)
 
-def parse_object_goal_instruction(language_instr):
+
+def parse_instruction(language_instr):
     """
-    Parse language instruction into a series of landmarks
-    Example: "first go to the kitchen and then go to the toilet" -> ["kitchen", "toilet"]
+    Unified instruction parser that generates robot code for any navigation instruction.
+    Works for both object goal navigation and spatial goal navigation.
+    
+    Example: "go to the chair, then the table" -> "robot.move_to_object('chair')\nrobot.move_to_object('table')"
+    Example: "move to the left of the plant" -> "robot.move_to_left('plant')"
     """
-    provider = get_llm_provider()
-    text = provider.parse_object_goal_instruction(
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Extract a concise, comma-separated list of landmark nouns from the "
-                    "user request. Output only the list (no prose, no Markdown)."
-                ),
-            },
-            {
-                "role": "user",
-                "content": "go to the kitchen and then go to the toilet",
-            },
-            {
-                "role": "assistant",
-                "content": "kitchen, toilet"
-            },
-            {
-                "role": "user",
-                "content": "go to the chair and then go to another chair"
-            },
-            {
-                "role": "assistant",
-                "content": "chair, chair"
-            },
-            {
-                "role": "user",
-                "content": "navigate to the green sofa and turn right and find several chairs, finally go to the painting"
-            },
-            {
-                "role": "assistant",
-                "content": "green sofa, chairs, painting"
-            },
-            {
-                "role": "user",
-                "content": "approach the window in front, turn right and go to the television, and finally go by the oven in the kitchen"
-            },
-            {
-                "role": "assistant",
-                "content": "window, television, oven, kitchen"
-            },
-            {
-                "role": "user",
-                "content": "walk to the plant first, turn around and come back to the table, go further into the bedroom, and stand next to the bed"
-            },
-            {
-                "role": "assistant",
-                "content": "plant, table, bedroom, bed"
-            },
-            {
-                "role": "user",
-                "content": "go by the stairs, go to the room next to it, approach the book shelf and then go to the table in the next room"
-            },
-            {
-                "role": "assistant",
-                "content": "stairs, room, book shelf, table, next room"
-            },
-            {
-                "role": "user",
-                "content": "Go front left and move to the table, then turn around and find a cushion, later stand next to a column before finally navigate to any appliances"
-            },
-            {
-                "role": "assistant",
-                "content": "table, cushion, column, appliances"
-            },
-            {
-                "role": "user",
-                "content": "Move to the west of the chair, with the sofa on your right, move to the table, then turn right 90 degree, then find a table"
-            },
-            {
-                "role": "assistant",
-                "content": "chair, table"
-            },
-            {
-                "role": "user",
-                "content": language_instr
-            }
-        ],
-    )
-
-    return [x.strip() for x in text.split(",")]
-
-
-def parse_spatial_instruction(language_instr):
     provider = get_llm_provider()
     instructions_list = [language_instr]
     results = ""
     for lang in instructions_list:
-        text = provider.parse_spatial_instruction(
+        text = provider.parse_instruction(
             messages=[
                 {
                     "role": "system",
@@ -169,6 +88,12 @@ def parse_spatial_instruction(language_instr):
                 {"role": "assistant", "content": "robot.move_to_object('chair')"},
                 {"role": "user", "content": "come to the table"},
                 {"role": "assistant", "content": "robot.move_to_object('table')"},
+                {"role": "user", "content": "go to the chair and then go to the table"},
+                {"role": "assistant", "content": "robot.move_to_object('chair')\nrobot.move_to_object('table')"},
+                {"role": "user", "content": "navigate to the green sofa and then go to the painting"},
+                {"role": "assistant", "content": "robot.move_to_object('green_sofa')\nrobot.move_to_object('painting')"},
+                {"role": "user", "content": "walk to the plant first, then come back to the table, and stand next to the bed"},
+                {"role": "assistant", "content": "robot.move_to_object('plant')\nrobot.move_to_object('table')\nrobot.move_to_object('bed')"},
                 {"role": "user", "content": "with the television on your left"},
                 {"role": "assistant", "content": "robot.with_object_on_left('television')"},
                 {"role": "user", "content": "with the toilet to your right, turn left 30 degrees"},
@@ -219,5 +144,5 @@ def parse_spatial_instruction(language_instr):
 
 
 if __name__ == '__main__':
-    text = parse_spatial_instruction("go to the sofa, turn right and move in between the table and the chair, and then move back and forth to the keyboard and the screen twice")
+    text = parse_instruction("go to the sofa, turn right and move in between the table and the chair, and then move back and forth to the keyboard and the screen twice")
     logger.info("%s", text)

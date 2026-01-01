@@ -5,7 +5,7 @@ import hydra
 
 from vlmaps.task.habitat_spatial_goal_nav_task import HabitatSpatialGoalNavigationTask
 from vlmaps.robot.habitat_lang_robot import HabitatLanguageRobot
-from vlmaps.utils.llm_utils import parse_spatial_instruction
+from vlmaps.utils.llm_utils import parse_instruction
 from vlmaps.utils.matterport3d_categories import mp3dcat
 from vlmaps.utils.logging_utils import setup_logging
 
@@ -37,7 +37,7 @@ def main(config: DictConfig) -> None:
 
         for task_id in range(len(spatial_nav_task.task_dict)):
             spatial_nav_task.setup_task(task_id)
-            result_code = parse_spatial_instruction(spatial_nav_task.instruction)
+            result_code = parse_instruction(spatial_nav_task.instruction)
             logger.info("Instruction: %s", spatial_nav_task.instruction)
             robot.empty_recorded_actions()
             robot.set_agent_state(spatial_nav_task.init_hab_tf)

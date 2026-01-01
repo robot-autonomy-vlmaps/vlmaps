@@ -8,9 +8,8 @@ import yaml
 
 @dataclass
 class OpenAIConfig:
-    parse_object_goal_instruction: Dict[str, Any] = field(default_factory=dict)
-    parse_spatial_instruction: Dict[str, Any] = field(default_factory=dict)
     find_similar_category: Dict[str, Any] = field(default_factory=dict)
+    parse_instruction: Dict[str, Any] = field(default_factory=dict)
     base_url: Optional[str] = None
     timeout: Optional[float] = None
     extra: Dict[str, Any] = field(default_factory=dict)
@@ -43,9 +42,8 @@ def load_llm_config(path: Optional[str] = None, provider: Optional[str] = None) 
         openai_cfg = OpenAIConfig(
             base_url=provider_cfg.get("base_url"),
             timeout=provider_cfg.get("timeout"),
-            parse_object_goal_instruction=provider_cfg.get("parse_object_goal_instruction", {}) or {},
-            parse_spatial_instruction=provider_cfg.get("parse_spatial_instruction", {}) or {},
             find_similar_category=provider_cfg.get("find_similar_category", {}) or {},
+            parse_instruction=provider_cfg.get("parse_instruction", {}) or {},
             extra=provider_cfg.get("extra", {}) or {},
         )
         return LLMConfig(provider=provider_name, openai=openai_cfg)
