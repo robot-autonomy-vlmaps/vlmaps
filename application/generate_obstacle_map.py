@@ -29,8 +29,9 @@ def main(config: DictConfig) -> None:
     obs_map = robot.map.obstacles_cropped
     obs_map = obs_map.astype(np.uint8) * 255
     cv2.imshow("obs_map", obs_map)
-    logger.info("Waiting for user input to continue obstacle map generation")
-    cv2.waitKey()
+    if config.nav.waitkey:
+        logger.info("Waiting for user input to continue obstacle map generation")
+        cv2.waitKey()
 
     # customize obstacles map
     robot.map.customize_obstacle_map(

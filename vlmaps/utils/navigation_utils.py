@@ -76,13 +76,14 @@ def point_in_contours(obs_map, contours_list, point):
     return ids
 
 
-def build_visgraph_with_obs_map(obs_map, use_internal_contour=False, internal_point=None, vis=False):
+def build_visgraph_with_obs_map(obs_map, use_internal_contour=False, internal_point=None, vis=False, waitkey=False):
     obs_map_vis = (obs_map[:, :, None] * 255).astype(np.uint8)
     obs_map_vis = np.tile(obs_map_vis, [1, 1, 3])
     if vis:
         cv2.imshow("obs", obs_map_vis)
-        logger.info("Waiting for key press while displaying obstacles map")
-        cv2.waitKey()
+        if waitkey:
+            logger.info("Waiting for key press while displaying obstacles map")
+            cv2.waitKey()
 
     contours_list, centers_list, bbox_list, hierarchy = get_segment_islands_pos(
         obs_map, 0, detect_internal_contours=use_internal_contour
@@ -115,9 +116,9 @@ def build_visgraph_with_obs_map(obs_map, use_internal_contour=False, internal_po
         zlist = [x.y for x in contour_pos]
         if vis:
             # plt.plot(xlist, zlist)
-
-            logger.info("Waiting for key press after contour visualization")
-            cv2.waitKey()
+            if waitkey:
+                logger.info("Waiting for key press after contour visualization")
+                cv2.waitKey()
     g = vg.VisGraph()
     g.build(poly_list, workers=4)
     return g
@@ -131,7 +132,7 @@ def get_nearby_position(goal: Tuple[float, float], G: vg.VisGraph) -> Tuple[floa
             return (goal[0] + dr, goal[1] + dc)
 
 
-def plan_to_pos_v2(start, goal, obstacles, G: vg.VisGraph = None, vis=False):
+def plan_to_pos_v2(start, goal, obstacles, G: vg.VisGraph = None, vis=False, waitkey=False):
     """
     plan a path on a cropped obstacles map represented by a graph.
     Start and goal are tuples of (row, col) in the map.
@@ -144,8 +145,9 @@ def plan_to_pos_v2(start, goal, obstacles, G: vg.VisGraph = None, vis=False):
         obs_map_vis = cv2.circle(obs_map_vis, (int(start[1]), int(start[0])), 3, (255, 0, 0), -1)
         obs_map_vis = cv2.circle(obs_map_vis, (int(goal[1]), int(goal[0])), 3, (0, 0, 255), -1)
         cv2.imshow("planned path", obs_map_vis)
-        logger.info("Waiting for key press on planned path visualization")
-        cv2.waitKey()
+        if waitkey:
+            logger.info("Waiting for key press on planned path visualization")
+            cv2.waitKey()
 
     path = []
     startvg = vg.Point(start[0], start[1])
@@ -196,8 +198,9 @@ def plan_to_pos_v2(start, goal, obstacles, G: vg.VisGraph = None, vis=False):
 
         seg = Image.fromarray(obs_map_vis)
         cv2.imshow("planned path", obs_map_vis)
-        logger.info("Waiting for key press on planned path window")
-        cv2.waitKey()
+        if waitkey:
+            logger.info("Waiting for key press on planned path window")
+            cv2.waitKey()
 
     return path
 
