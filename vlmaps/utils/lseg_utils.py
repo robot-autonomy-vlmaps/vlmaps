@@ -105,6 +105,8 @@ def get_lseg_feat(
         cv2.imshow("image", vis_image[:, :, [2, 1, 0]])
         if waitkey:
             cv2.waitKey()
+        else:
+            cv2.waitKey(1)
         fig = plt.figure()
         plt.imshow(seg)
         plt.legend(handles=patches, loc="upper left", bbox_to_anchor=(1.0, 1), prop={"size": 20})

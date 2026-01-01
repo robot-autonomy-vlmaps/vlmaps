@@ -654,6 +654,8 @@ def main(config: DictConfig) -> None:
     if config.nav.waitkey:
         logger.info("Waiting for key press on source rgb window")
         cv2.waitKey()
+    else:
+        cv2.waitKey(1)
 
     tar_hab_tf = cvt_pose_vec2tf(robot.vlmaps_dataloader.base_poses[800])
     robot.set_agent_state(tar_hab_tf)
@@ -664,6 +666,8 @@ def main(config: DictConfig) -> None:
     if config.nav.waitkey:
         logger.info("Waiting for key press on target rgb window")
         cv2.waitKey()
+    else:
+        cv2.waitKey(1)
 
     robot.set_agent_state(hab_tf)
     robot.vlmaps_dataloader.from_habitat_tf(tar_hab_tf)

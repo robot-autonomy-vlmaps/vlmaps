@@ -209,4 +209,6 @@ def get_dynamic_obstacles_map_3d(
         if waitkey:
             logger.info("Waiting for key press after showing new obstacles")
             cv2.waitKey()
+        else:
+            cv2.waitKey(1)
     return new_obstacles

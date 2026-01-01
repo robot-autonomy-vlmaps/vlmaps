@@ -84,6 +84,8 @@ def build_visgraph_with_obs_map(obs_map, use_internal_contour=False, internal_po
         if waitkey:
             logger.info("Waiting for key press while displaying obstacles map")
             cv2.waitKey()
+        else:
+            cv2.waitKey(1)
 
     contours_list, centers_list, bbox_list, hierarchy = get_segment_islands_pos(
         obs_map, 0, detect_internal_contours=use_internal_contour
@@ -119,6 +121,8 @@ def build_visgraph_with_obs_map(obs_map, use_internal_contour=False, internal_po
             if waitkey:
                 logger.info("Waiting for key press after contour visualization")
                 cv2.waitKey()
+            else:
+                cv2.waitKey(1)
     g = vg.VisGraph()
     g.build(poly_list, workers=4)
     return g
@@ -148,6 +152,8 @@ def plan_to_pos_v2(start, goal, obstacles, G: vg.VisGraph = None, vis=False, wai
         if waitkey:
             logger.info("Waiting for key press on planned path visualization")
             cv2.waitKey()
+        else:
+            cv2.waitKey(1)
 
     path = []
     startvg = vg.Point(start[0], start[1])
@@ -201,6 +207,8 @@ def plan_to_pos_v2(start, goal, obstacles, G: vg.VisGraph = None, vis=False, wai
         if waitkey:
             logger.info("Waiting for key press on planned path window")
             cv2.waitKey()
+        else:
+            cv2.waitKey(1)
 
     return path
 

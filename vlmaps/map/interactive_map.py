@@ -606,6 +606,8 @@ class InteractiveMap:
         cv2.imshow("obstacles", obstacles)
         if waitkey:
             cv2.waitKey()
+        else:
+            cv2.waitKey(1)
 
     def visualize_floor_region_bboxes(self, zoom: float = 1.0, waitkey: bool = False):
         dataloader = self.vlmaps_dataloader
@@ -636,6 +638,8 @@ class InteractiveMap:
         cv2.imshow("obstacles", obstacles)
         if waitkey:
             cv2.waitKey()
+        else:
+            cv2.waitKey(1)
 
 
 @hydra.main(
