@@ -23,6 +23,7 @@ def get_lseg_feat(
     norm_mean=[0.5, 0.5, 0.5],
     norm_std=[0.5, 0.5, 0.5],
     vis=False,
+    waitkey=False,
 ):
     vis_image = image.copy()
     image = transform(image).unsqueeze(0).to(device)
@@ -102,7 +103,10 @@ def get_lseg_feat(
         mask, patches = get_new_mask_pallete(pred, new_palette, out_label_flag=True, labels=labels)
         seg = mask.convert("RGBA")
         cv2.imshow("image", vis_image[:, :, [2, 1, 0]])
-        cv2.waitKey()
+        if waitkey:
+            cv2.waitKey()
+        else:
+            cv2.waitKey(1)
         fig = plt.figure()
         plt.imshow(seg)
         plt.legend(handles=patches, loc="upper left", bbox_to_anchor=(1.0, 1), prop={"size": 20})

@@ -169,6 +169,7 @@ def get_dynamic_obstacles_map_3d(
     use_multiple_templates=True,
     avg_mode=0,
     vis=False,
+    waitkey=False,
 ):
     all_obstacles_mask = obstacles_cropped == 0
     scores_mat = get_lseg_score(
@@ -205,6 +206,9 @@ def get_dynamic_obstacles_map_3d(
 
     if vis:
         cv2.imshow("new obstacles_cropped", (new_obstacles * 255).astype(np.uint8))
-        logger.info("Waiting for key press after showing new obstacles")
-        cv2.waitKey()
+        if waitkey:
+            logger.info("Waiting for key press after showing new obstacles")
+            cv2.waitKey()
+        else:
+            cv2.waitKey(1)
     return new_obstacles

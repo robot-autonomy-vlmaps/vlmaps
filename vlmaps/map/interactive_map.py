@@ -574,7 +574,7 @@ class InteractiveMap:
         display_map(top_down_map)
 
     def visualize_floor_object_bboxes(
-        self, zoom: float = 1.0, ignore: List[str] = ["void", "wall", "floor", "misc", "appliances", "objects"]
+        self, zoom: float = 1.0, ignore: List[str] = ["void", "wall", "floor", "misc", "appliances", "objects"], waitkey: bool = False
     ):
         dataloader = self.vlmaps_dataloader
         object_bboxes_hab = self.get_floor_object_bboxes()
@@ -604,9 +604,12 @@ class InteractiveMap:
                 2,
             )
         cv2.imshow("obstacles", obstacles)
-        cv2.waitKey()
+        if waitkey:
+            cv2.waitKey()
+        else:
+            cv2.waitKey(1)
 
-    def visualize_floor_region_bboxes(self, zoom: float = 1.0):
+    def visualize_floor_region_bboxes(self, zoom: float = 1.0, waitkey: bool = False):
         dataloader = self.vlmaps_dataloader
         region_bboxes_hab = self.get_floor_region_bboxes()
         region_bboxes_cropped = self.convert_bboxes_hab_to_cropped_map_bboxes(
@@ -633,7 +636,10 @@ class InteractiveMap:
                 2,
             )
         cv2.imshow("obstacles", obstacles)
-        cv2.waitKey()
+        if waitkey:
+            cv2.waitKey()
+        else:
+            cv2.waitKey(1)
 
 
 @hydra.main(

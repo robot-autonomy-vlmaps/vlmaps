@@ -568,7 +568,10 @@ class HabitatLanguageRobot(LangRobot):
         row, col, angle = self.vlmaps_dataloader.to_cropped_map_pose()
         map = cv2.circle(map, (int(col), int(row)), 3, (255, 0, 0), -1)
         cv2.imshow("real path", map)
-        cv2.waitKey(1)
+        if self.config.nav.waitkey:
+            cv2.waitKey(0)
+        else:
+            cv2.waitKey(1)
 
     def display_full_map_pos_list_on_map(self, map: np.ndarray, pos_list: List[List[float]]) -> np.ndarray:
         for pos_i, pos in enumerate(pos_list):
@@ -648,8 +651,11 @@ def main(config: DictConfig) -> None:
     rgb = obs["color_sensor"]
     bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
     cv2.imshow("scr rgb", bgr)
-    logger.info("Waiting for key press on source rgb window")
-    cv2.waitKey()
+    if config.nav.waitkey:
+        logger.info("Waiting for key press on source rgb window")
+        cv2.waitKey()
+    else:
+        cv2.waitKey(1)
 
     tar_hab_tf = cvt_pose_vec2tf(robot.vlmaps_dataloader.base_poses[800])
     robot.set_agent_state(tar_hab_tf)
@@ -657,8 +663,11 @@ def main(config: DictConfig) -> None:
     rgb = obs["color_sensor"]
     bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
     cv2.imshow("tar rgb", bgr)
-    logger.info("Waiting for key press on target rgb window")
-    cv2.waitKey()
+    if config.nav.waitkey:
+        logger.info("Waiting for key press on target rgb window")
+        cv2.waitKey()
+    else:
+        cv2.waitKey(1)
 
     robot.set_agent_state(hab_tf)
     robot.vlmaps_dataloader.from_habitat_tf(tar_hab_tf)

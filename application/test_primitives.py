@@ -107,8 +107,11 @@ def main(config: DictConfig) -> None:
     robot.recorded_actions_list = []
     rgb = robot.sim.get_sensor_observations(0)["color_sensor"]
     cv2.imshow("curr obs", rgb)
-    logger.info("Waiting for key input before continuing test primitives")
-    cv2.waitKey()
+    if config.nav.waitkey:
+        logger.info("Waiting for key input before continuing test primitives")
+        cv2.waitKey()
+    else:
+        cv2.waitKey(1)
     robot.turn(90)
     robot.turn(-90)
     robot.move_to_object("counter")
