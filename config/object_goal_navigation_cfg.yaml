@@ -5,8 +5,20 @@ defaults:
   - _self_
 nav:
   valid_range: 1
-  vis: True
+  vis: False
   tasks_per_scene: 20
   waitkey: False
+  # Navigation robustness parameters
+  robot_radius_pixels: 3.0 # Robot footprint radius in map pixels
+  min_clearance: null # Minimum clearance from obstacles (default: 1.5 * robot_radius)
+  path_smoothing: true
+  smoothing_method: 'simple' # "simple" or "douglas_peucker"
+  smoothing_factor: 0.5 # Window size for simple, epsilon for douglas_peucker
+  enable_replanning: true
+  replan_deviation_threshold: 2.0 # Maximum deviation from path before replanning (cells)
+  replan_check_interval: 5 # Number of actions between replan checks
+  adaptive_dilation: true
+  preserve_narrow_passages: true
+  narrow_passage_width: 3.0 # Width threshold for narrow passages (pixels)
 # scene_id: [1, 2, 3, 4, 5, 6, 7, 8, 9]
-scene_id: 3
+scene_id: 1
