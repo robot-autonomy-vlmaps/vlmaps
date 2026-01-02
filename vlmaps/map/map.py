@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Union
 import cv2
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
-from scipy.ndimage import binary_dilation, binary_erosion, gaussian_filter, median_filter
+from scipy.ndimage import binary_dilation, binary_erosion, gaussian_filter, median_filter, distance_transform_edt
 from shapely.geometry import Point, Polygon
 
 from vlmaps.utils.navigation_utils import get_dist_to_bbox_2d
@@ -180,6 +180,78 @@ class Map:
         )
         binary_map = cv2.resize(binary_map.astype(float), (w, h))
         return binary_map
+
+    @staticmethod
+    def detect_narrow_passages(obstacle_map: np.ndarray, min_width_threshold: float = 3.0) -> np.ndarray:
+        """
+        Detect narrow passages in obstacle map using distance transform.
+        
+        Args:
+            obstacle_map: Binary obstacle map (1 = free, 0 = occupied)
+            min_width_threshold: Minimum width to consider a passage (in pixels)
+        
+        Returns:
+            Binary mask where 1 indicates narrow passage areas
+        """
+        # Invert map: 0 = free, 1 = occupied for distance transform
+        obs_inverted = 1 - obstacle_map.astype(np.uint8)
+        
+        # Distance transform gives distance from each free cell to nearest obstacle
+        dist_transform = distance_transform_edt(obs_inverted)
+        
+        # Narrow passages are areas where distance is less than threshold
+        # This means the passage width is approximately 2 * distance (distance to both sides)
+        narrow_passage_mask = (dist_transform < min_width_threshold / 2).astype(np.uint8)
+        
+        # Also check opposite direction (distance from obstacles to free space)
+        # This helps identify passages more accurately
+        free_mask = obstacle_map.astype(np.uint8)
+        dist_from_obstacles = distance_transform_edt(free_mask)
+        
+        # Combine both distance transforms
+        # A narrow passage should have low distance from both sides
+        combined_dist = np.minimum(dist_transform, dist_from_obstacles)
+        narrow_passage_mask = (combined_dist < min_width_threshold / 2).astype(np.uint8)
+        
+        return narrow_passage_mask
+
+    @staticmethod
+    def adaptive_dilate_map(
+        binary_map: np.ndarray, 
+        dilate_iter: int = 0, 
+        gaussian_sigma: float = 1.0,
+        preserve_passages: bool = True,
+        narrow_passage_width: float = 3.0
+    ) -> np.ndarray:
+        """
+        Apply adaptive dilation that preserves narrow passages.
+        
+        Args:
+            binary_map: Binary map (1 = free, 0 = occupied)
+            dilate_iter: Number of dilation iterations
+            gaussian_sigma: Gaussian filter sigma
+            preserve_passages: If True, avoid dilating narrow passages
+            narrow_passage_width: Width threshold for narrow passages (pixels)
+        
+        Returns:
+            Dilated binary map with preserved passages
+        """
+        if not preserve_passages or dilate_iter == 0:
+            # Fall back to standard dilation
+            return Map._dilate_map(binary_map, dilate_iter, gaussian_sigma)
+        
+        # Detect narrow passages before dilation
+        narrow_passage_mask = Map.detect_narrow_passages(binary_map, narrow_passage_width)
+        
+        # Apply standard dilation
+        dilated_map = Map._dilate_map(binary_map, dilate_iter, gaussian_sigma)
+        
+        # Restore original values in narrow passage areas
+        # Only preserve passages that were originally free
+        passage_preserve_mask = narrow_passage_mask & (binary_map == 1)
+        dilated_map[passage_preserve_mask] = binary_map[passage_preserve_mask]
+        
+        return dilated_map
 
     def get_nearest_pos(self, curr_pos: List[float], name: str) -> List[float]:
         contours, centers, bbox_list = self.get_pos(name)
