@@ -11,6 +11,8 @@ Follow these steps in order:
 3. **[Generate Dataset](03-generate-dataset.md)** - Generate RGB-D videos from the MP3D dataset
 4. **[Index a VLMap](04-index-vlmap.md)** - Create and index a Visual Language Map
 5. **[Test Navigation](05-test-navigation.md)** - Test object goal and spatial goal navigation
+6. **[LLM Usage](06-llm.md)** - LLM integration and instruction parsing
+7. **[Navigation Stack](07-navigation.md)** - Path planning, navigation improvements, and configuration
 
 ## Overview
 

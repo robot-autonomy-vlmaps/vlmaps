@@ -55,6 +55,17 @@ Use the `master` branch
 git checkout master
 ```
 
+## Navigation System
+
+The navigation stack has been improved to address common issues with corner collisions, narrow passage closure, and path quality. Key improvements include:
+
+- **Path offsetting**: Prevents collisions at sharp corners by maintaining safe clearance from obstacles
+- **Adaptive dilation**: Preserves narrow passages (e.g., half-open doors) while providing safety margins
+- **Dynamic replanning**: Automatically updates paths during execution if the robot deviates
+- **Path smoothing**: Reduces jagged trajectories for more efficient navigation
+
+For detailed information on the navigation architecture, configuration, and tuning, see the [Navigation Documentation](docs/07-navigation.md).
+
 ## Generate Dataset
 To build VLMaps for simulated environments, we manually collected 10 sequences of RGB-D videos among 10 scenes in Habitat simulator with Matterport3D dataset. We provide script and pose meta data to generate the RGB-D videos. Please follow the next few steps to generate the dataset.
 
@@ -279,9 +290,14 @@ If you find the dataset or code useful, please cite:
   - [ ] gradcam_map.py
   - [ ] clip_map.py
   - [ ] gtmap.py
-- [ ] **Improve Navigation Stack (Looking for Contributions from the Community)**
-  - [ ] the code currently uses `pyvisgraph` to build covisibility graph based on an obstacle map for navigation, which often leads to getting stuck or collisions when the robot navigates at the corner of objects (like the corner of the table). The current solution is to dilate the obstacle map before building the covisibility graph, but this will leads to closing of narrow passages (half-open door becomes closed door). I am happy to discuss solutions to this.
-  - [ ] navigation stack on real robot with LiDAR, RGBD camera and other sensors.
+- [ ] **Navigation Stack Improvements** ✅ **Completed**
+  - [x] Path offsetting to prevent corner collisions
+  - [x] Adaptive dilation to preserve narrow passages
+  - [x] Dynamic replanning during execution
+  - [x] Path smoothing to reduce jagged trajectories
+  - See [Navigation Documentation](docs/07-navigation.md) for details
+- [ ] **Future Enhancements**
+  - [ ] navigation stack on real robot with LiDAR, RGBD camera and other sensors
 
 ## License
 
