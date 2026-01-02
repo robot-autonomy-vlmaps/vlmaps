@@ -438,8 +438,26 @@ class HabitatLanguageRobot(LangRobot):
             List[str]: list of actions
         """
         # Guard against invalid targets (e.g., object not found / middle point unavailable)
-        if pos is None or any(p is None for p in pos):
-            logger.warning("move_to: target position is invalid; skipping navigation. pos=%s", pos)
+        if pos is None:
+            logger.warning("move_to: target position is None; skipping navigation")
+            return []
+        
+        # Validate and convert to numeric types
+        try:
+            if isinstance(pos, (list, tuple)) and len(pos) >= 2:
+                row = float(pos[0])
+                col = float(pos[1])
+                pos = (row, col)
+            else:
+                logger.warning("move_to: target position has invalid format; skipping navigation. pos=%s (type: %s)", pos, type(pos))
+                return []
+        except (TypeError, ValueError, IndexError) as e:
+            logger.warning("move_to: target position cannot be converted to numbers; skipping navigation. pos=%s, error=%s", pos, e)
+            return []
+        
+        # Check for None values after conversion
+        if any(p is None or (isinstance(p, float) and (np.isnan(p) or np.isinf(p))) for p in pos):
+            logger.warning("move_to: target position contains None, NaN, or Inf; skipping navigation. pos=%s", pos)
             return []
 
         actual_actions_list = []
@@ -447,8 +465,23 @@ class HabitatLanguageRobot(LangRobot):
         # while not success:
         self._set_nav_curr_pose()
         curr_pose_on_full_map = self.get_agent_pose_on_map()  # (row, col, angle_deg) on full map
+        # Get navigation config parameters
+        nav_config = self.config.get("nav", {})
+        robot_radius = nav_config.get("robot_radius_pixels", 3.0)
+        min_clearance = nav_config.get("min_clearance", None)
+        path_smoothing = nav_config.get("path_smoothing", True)
+        smoothing_method = nav_config.get("smoothing_method", "simple")
+        smoothing_factor = nav_config.get("smoothing_factor", 0.5)
+        
         paths = self.nav.plan_to(
-            curr_pose_on_full_map[:2], pos, vis=self.config["nav"]["vis"]
+            curr_pose_on_full_map[:2], 
+            pos, 
+            vis=self.config["nav"]["vis"],
+            robot_radius_pixels=robot_radius,
+            min_clearance=min_clearance,
+            path_smoothing=path_smoothing,
+            smoothing_method=smoothing_method,
+            smoothing_factor=smoothing_factor
         )  # take (row, col) in full map
         logger.debug("Planned path with %d waypoints", len(paths))
         actions_list, poses_list = self.controller.convert_paths_to_actions(curr_pose_on_full_map, paths[1:])
@@ -499,6 +532,11 @@ class HabitatLanguageRobot(LangRobot):
                 self.recorded_robot_pos = []
 
         real_actions_list = []
+        nav_config = self.config.get("nav", {})
+        enable_replanning = nav_config.get("enable_replanning", True)
+        replan_deviation_threshold = nav_config.get("replan_deviation_threshold", 2.0)
+        replan_check_interval = nav_config.get("replan_check_interval", 5)
+        
         for action_i, action in enumerate(actions_list):
             self._execute_action(action)
 
@@ -511,6 +549,55 @@ class HabitatLanguageRobot(LangRobot):
             row, col, angle = self._get_full_map_pose()
             if vis:
                 self.recorded_robot_pos.append((row, col))
+            
+            # Check for replanning if enabled
+            if enable_replanning and self.nav.current_path is not None and self.nav.path_goal is not None:
+                # Validate goal is numeric
+                try:
+                    goal_row = float(self.nav.path_goal[0])
+                    goal_col = float(self.nav.path_goal[1])
+                    goal_valid = True
+                except (TypeError, ValueError, IndexError):
+                    logger.warning("Invalid goal position in replanning: %s, skipping replan", self.nav.path_goal)
+                    goal_valid = False
+                
+                if goal_valid and self.nav.check_replan_needed(
+                    (row, col),
+                    deviation_threshold=replan_deviation_threshold,
+                    check_interval=replan_check_interval,
+                    action_count=action_i
+                ):
+                    logger.info("Replanning triggered at action %d", action_i)
+                    # Replan from current position to original goal
+                    # Get navigation config parameters
+                    robot_radius = nav_config.get("robot_radius_pixels", 3.0)
+                    min_clearance = nav_config.get("min_clearance", None)
+                    path_smoothing = nav_config.get("path_smoothing", True)
+                    smoothing_method = nav_config.get("smoothing_method", "simple")
+                    smoothing_factor = nav_config.get("smoothing_factor", 0.5)
+                    
+                    try:
+                        new_paths = self.nav.plan_to(
+                            (row, col),
+                            (goal_row, goal_col),  # Use validated numeric coordinates
+                            vis=self.config["nav"]["vis"],
+                            robot_radius_pixels=robot_radius,
+                            min_clearance=min_clearance,
+                            path_smoothing=path_smoothing,
+                            smoothing_method=smoothing_method,
+                            smoothing_factor=smoothing_factor
+                        )
+                        # Convert new path to actions and continue execution
+                        curr_pose = (row, col, angle)
+                        new_actions, new_poses = self.controller.convert_paths_to_actions(curr_pose, new_paths[1:])
+                        # Replace remaining actions with new plan
+                        actions_list = actions_list[:action_i+1] + new_actions
+                        if poses_list is not None:
+                            poses_list = poses_list[:action_i+1] + new_poses
+                        logger.info("Replanned path with %d new actions", len(new_actions))
+                    except Exception as e:
+                        logger.error("Replanning failed: %s, continuing with original plan", e)
+            
             # x, z = grid_id2base_pos_3d(self.gs, self.cs, col, row)
             # pred_x, pred_z, pred_angle = poses_list[action_i]
             # success = self._check_if_pose_match_prediction(x, z, pred_x, pred_z)
