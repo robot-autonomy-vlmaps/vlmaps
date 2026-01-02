@@ -194,11 +194,24 @@ class VLMap(Map):
             self.clip_feat_dim,
             vis=vis,
         )
-        self.obstacles_new_cropped = Map._dilate_map(
-            self.obstacles_new_cropped == 0,
-            self.map_config.dilate_iter,
-            self.map_config.gaussian_sigma,
-        )
+        # Use adaptive dilation if configured (preserves narrow passages)
+        preserve_passages = getattr(self.map_config, "preserve_narrow_passages", True)
+        narrow_passage_width = getattr(self.map_config, "narrow_passage_width", 3.0)
+        
+        if preserve_passages:
+            self.obstacles_new_cropped = Map.adaptive_dilate_map(
+                self.obstacles_new_cropped == 0,
+                self.map_config.dilate_iter,
+                self.map_config.gaussian_sigma,
+                preserve_passages=True,
+                narrow_passage_width=narrow_passage_width,
+            )
+        else:
+            self.obstacles_new_cropped = Map._dilate_map(
+                self.obstacles_new_cropped == 0,
+                self.map_config.dilate_iter,
+                self.map_config.gaussian_sigma,
+            )
         self.obstacles_new_cropped = self.obstacles_new_cropped == 0
 
     # def load_categories(self, categories: List[str] = None):
