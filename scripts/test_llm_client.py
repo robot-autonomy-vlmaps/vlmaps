@@ -33,8 +33,9 @@ def main():
     args = parser.parse_args()
 
     if args.mode in ("instruction", "all"):
-        resp = parse_instruction(args.instruction)
-        logger.info("parse_instruction -> %s", resp)
+        raw_response, sanitized_code = parse_instruction(args.instruction)
+        logger.info("parse_instruction raw -> %s", raw_response)
+        logger.info("parse_instruction sanitized -> %s", sanitized_code)
 
     if args.mode in ("category", "all"):
         class_list = [c.strip() for c in args.choices.split(",") if c.strip()]
