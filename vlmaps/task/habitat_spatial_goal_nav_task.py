@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import os
 from typing import Dict, List, Tuple, Union
 import logging
 
@@ -106,12 +107,34 @@ class HabitatSpatialGoalNavigationTask(HabitatTask):
 
     def save_single_task_metric(
         self,
-        save_path: Union[Path, str],
+        scene_id: int,
+        task_id: int,
+        execution_id: str,
+        execution_datetime: str,
+        instruction_provider: str,
+        instruction_response_raw: str,
+        instruction_response_sanitized: str,
         forward_dist: float = 0.05,
         turn_angle: float = 1,
     ):
+        # Build new folder structure path: ./data/task_results/{scene_id}/{task_id}/{execution_datetime}_{execution_id}.json
+        # Make execution_datetime filesystem-safe by replacing colons with underscores
+        execution_datetime_safe = execution_datetime.replace(":", "_").replace(".", "_")
+        filename = f"{execution_datetime_safe}_{execution_id}.json"
+        save_dir = Path("./data/task_results") / str(scene_id) / str(task_id)
+        os.makedirs(save_dir, exist_ok=True)
+        save_path = save_dir / filename
+        
         results_dict = {}
-        results_dict["task_id"] = self.task_id
+        # New metadata fields
+        results_dict["scene_id"] = scene_id
+        results_dict["task_id"] = task_id
+        results_dict["execution_id"] = execution_id
+        results_dict["execution_datetime"] = execution_datetime
+        results_dict["instruction_provider"] = instruction_provider
+        results_dict["instruction_response_raw"] = instruction_response_raw
+        results_dict["instruction_response_sanitized"] = instruction_response_sanitized
+        # Existing fields
         results_dict["scene"] = self.scene
         results_dict["num_subgoals"] = self.n_subgoals_in_task
         # results_dict["num_subgoal_success"] = self.n_success_subgoals

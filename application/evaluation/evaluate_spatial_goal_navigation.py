@@ -1,5 +1,7 @@
 import logging
 import os
+import uuid
+from datetime import datetime
 from omegaconf import DictConfig
 import hydra
 
@@ -8,6 +10,7 @@ from vlmaps.robot.habitat_lang_robot import HabitatLanguageRobot
 from vlmaps.utils.llm_utils import parse_instruction
 from vlmaps.utils.matterport3d_categories import mp3dcat
 from vlmaps.utils.logging_utils import setup_logging
+from vlmaps.llm.config import load_llm_config
 
 
 logger = logging.getLogger(__name__)
@@ -37,12 +40,23 @@ def main(config: DictConfig) -> None:
 
         for task_id in range(len(spatial_nav_task.task_dict)):
             spatial_nav_task.setup_task(task_id)
-            result_code = parse_instruction(spatial_nav_task.instruction)
+            
+            # Generate execution metadata
+            execution_id = str(uuid.uuid4())
+            execution_datetime = datetime.now()
+            
+            # Get LLM provider name
+            llm_config = load_llm_config()
+            instruction_provider = llm_config.provider
+            
+            # Parse instruction and get both raw and sanitized responses
+            instruction_response_raw, instruction_response_sanitized = parse_instruction(spatial_nav_task.instruction)
+            
             logger.info("Instruction: %s", spatial_nav_task.instruction)
             robot.empty_recorded_actions()
             robot.set_agent_state(spatial_nav_task.init_hab_tf)
 
-            for line in result_code.split("\n"):
+            for line in instruction_response_sanitized.split("\n"):
                 logger.info("Evaluating line: %s", line)
                 if line:
                     eval(line)
@@ -52,10 +66,16 @@ def main(config: DictConfig) -> None:
             for action in recorded_actions_list:
                 spatial_nav_task.test_step(robot.sim, action, vis=config.nav.vis)
 
-            save_dir = robot.vlmaps_dataloader.data_dir / (config.map_config.map_type + "_spatial_nav_results")
-            os.makedirs(save_dir, exist_ok=True)
-            save_path = save_dir / f"{task_id:02}.json"
-            spatial_nav_task.save_single_task_metric(save_path)
+            # Save with new folder structure and metadata
+            spatial_nav_task.save_single_task_metric(
+                scene_id=robot.scene_id,
+                task_id=task_id,
+                execution_id=execution_id,
+                execution_datetime=execution_datetime.isoformat(),
+                instruction_provider=instruction_provider,
+                instruction_response_raw=instruction_response_raw,
+                instruction_response_sanitized=instruction_response_sanitized,
+            )
 
 
 if __name__ == "__main__":
