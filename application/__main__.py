@@ -12,6 +12,8 @@ from application.evaluation.compute_object_goal_navigation_metrics import main a
 from application.evaluation.compute_spatial_goal_navigation_metrics import main as compute_spatial_goal_nav_main
 from application.evaluation.evaluate_object_goal_navigation import main as eval_object_goal_nav_main
 from application.evaluation.evaluate_spatial_goal_navigation import main as eval_spatial_goal_nav_main
+from application.evaluation.reevaluate_object_goal_navigation import main as reevaluate_object_goal_nav_main
+from application.evaluation.reevaluate_spatial_goal_navigation import main as reevaluate_spatial_goal_nav_main
 from application.index_map import main as index_map_main
 from application.inspect_map import main as inspect_map_main
 from vlmaps.utils.logging_utils import setup_logging
@@ -84,6 +86,30 @@ def eval_spatial(overrides: Optional[List[str]] = typer.Argument(None, help="Hyd
 @eval_app.command("spatial-compute", help="Compute metrics for spatial-goal navigation")
 def eval_spatial_compute(overrides: Optional[List[str]] = typer.Argument(None, help="Hydra overrides, e.g., scene_id=0")) -> None:
     _compose_and_call(compute_spatial_goal_nav_main, "spatial_goal_navigation_cfg", overrides)
+
+
+@eval_app.command(
+    "object-reeval",
+    help="Re-evaluate an object-goal navigation execution (result_path comes from Hydra config/overrides)",
+)
+def eval_object_reeval(
+    overrides: Optional[List[str]] = typer.Argument(
+        None, help="Hydra overrides, e.g., result_path=..."
+    ),
+) -> None:
+    _compose_and_call(reevaluate_object_goal_nav_main, "object_goal_navigation_cfg", overrides)
+
+
+@eval_app.command(
+    "spatial-reeval",
+    help="Re-evaluate a spatial-goal navigation execution (result_path comes from Hydra config/overrides)",
+)
+def eval_spatial_reeval(
+    overrides: Optional[List[str]] = typer.Argument(
+        None, help="Hydra overrides, e.g., result_path=..."
+    ),
+) -> None:
+    _compose_and_call(reevaluate_spatial_goal_nav_main, "spatial_goal_navigation_cfg", overrides)
 
 
 app.add_typer(dataset_app, name="dataset")

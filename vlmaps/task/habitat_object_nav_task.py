@@ -1,7 +1,8 @@
 from pathlib import Path
 import json
 import logging
-from typing import Dict, List, Tuple, Union
+import os
+from typing import Dict, List, Tuple, Union, Optional
 
 from omegaconf import DictConfig
 import numpy as np
@@ -119,12 +120,48 @@ class HabitatObjectNavigationTask(HabitatTask):
 
     def save_single_task_metric(
         self,
-        save_path: Union[Path, str],
+        scene_id: int,
+        task_id: int,
+        execution_id: str,
+        execution_datetime: str,
+        instruction_provider: str,
+        instruction_response_raw: str,
+        instruction_response_sanitized: str,
         forward_dist: float = 0.05,
         turn_angle: float = 1,
+        evaluated_from: Optional[str] = None,
     ):
+        """
+        Save metrics for a single object navigation task execution.
+
+        Results are stored under:
+            ./data/task_results/{scene_id}/object/{task_id}/{execution_datetime_safe}_{execution_id}.json
+
+        If this execution is a re-evaluation of a previous run, the original
+        execution id can be recorded via `evaluated_from`, which is saved
+        as the `evaluatedFrom` field in the result JSON.
+        """
+        # Build new folder structure path:
+        # ./data/task_results/{scene_id}/object/{task_id}/{execution_datetime}_{execution_id}.json
+        # Make execution_datetime filesystem-safe by replacing colons and dots with underscores
+        execution_datetime_safe = execution_datetime.replace(":", "_").replace(".", "_")
+        filename = f"{execution_datetime_safe}_{execution_id}.json"
+        save_dir = Path("./data/task_results") / str(scene_id) / "object" / str(task_id)
+        os.makedirs(save_dir, exist_ok=True)
+        save_path = save_dir / filename
+
         results_dict = {}
-        results_dict["task_id"] = self.task_id
+        # New metadata fields
+        results_dict["scene_id"] = scene_id
+        results_dict["task_id"] = task_id
+        results_dict["execution_id"] = execution_id
+        results_dict["execution_datetime"] = execution_datetime
+        results_dict["instruction_provider"] = instruction_provider
+        results_dict["instruction_response_raw"] = instruction_response_raw
+        results_dict["instruction_response_sanitized"] = instruction_response_sanitized
+        if evaluated_from is not None:
+            results_dict["evaluatedFrom"] = evaluated_from
+        # Existing fields
         results_dict["scene"] = self.scene
         results_dict["num_subgoals"] = self.n_subgoals_in_task
         # results_dict["num_subgoal_success"] = self.n_success_subgoals

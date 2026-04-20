@@ -46,12 +46,17 @@ def parse_instruction(language_instr):
     Unified instruction parser that generates robot code for any navigation instruction.
     Works for both object goal navigation and spatial goal navigation.
     
+    Returns a tuple: (raw_response, sanitized_code)
+    - raw_response: The raw LLM response before sanitization
+    - sanitized_code: The sanitized code ready for execution
+    
     Example: "go to the chair, then the table" -> "robot.move_to_object('chair')\nrobot.move_to_object('table')"
     Example: "move to the left of the plant" -> "robot.move_to_left('plant')"
     """
     provider = get_llm_provider()
     instructions_list = [language_instr]
-    results = ""
+    raw_responses = []
+    sanitized_results = ""
     for lang in instructions_list:
         text = provider.parse_instruction(
             messages=[
@@ -138,11 +143,16 @@ def parse_instruction(language_instr):
             ],
         )
         if text:
+            raw_responses.append(text)
             sanitized = _sanitize_spatial_code(text)
-            results += (sanitized or text.strip()) + "\n"
-    return results
+            sanitized_results += (sanitized or text.strip()) + "\n"
+    
+    raw_response = "\n".join(raw_responses) if raw_responses else ""
+    sanitized_code = sanitized_results.strip()
+    return raw_response, sanitized_code
 
 
 if __name__ == '__main__':
-    text = parse_instruction("go to the sofa, turn right and move in between the table and the chair, and then move back and forth to the keyboard and the screen twice")
-    logger.info("%s", text)
+    raw_response, sanitized_code = parse_instruction("go to the sofa, turn right and move in between the table and the chair, and then move back and forth to the keyboard and the screen twice")
+    logger.info("Raw: %s", raw_response)
+    logger.info("Sanitized: %s", sanitized_code)
