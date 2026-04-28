@@ -1,4 +1,4 @@
-provider: openai
+provider: jazari
 
 openai:
   base_url: null
@@ -9,6 +9,20 @@ openai:
     # temperature: 0.2
   find_similar_category:
     model: gpt-5-nano
+    # max_tokens: 64
+    # temperature: 0.0
+  extra: {}
+
+jazari:
+  base_url: http://localhost:8000
+  api_key: null
+  timeout: 300
+  parse_instruction:
+    model: fast
+    # max_tokens: 300
+    # temperature: 0.2
+  find_similar_category:
+    model: base
     # max_tokens: 64
     # temperature: 0.0
   extra: {}
