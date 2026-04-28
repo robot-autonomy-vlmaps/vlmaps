@@ -1,10 +1,10 @@
 import openai
-from typing import List, Dict
+from typing import List, Dict, Optional
 from vlmaps.llm.base import LLMProvider
 from vlmaps.llm.config import OpenAIConfig
 
 class OpenAIProvider(LLMProvider):
-    def __init__(self, api_key: str, config: OpenAIConfig):
+    def __init__(self, api_key: Optional[str], config: OpenAIConfig):
         self.cfg = config
         self.client = openai.OpenAI(api_key=api_key, base_url=config.base_url, timeout=config.timeout)
 
