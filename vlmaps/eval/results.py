@@ -3,6 +3,7 @@ import logging
 import os
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -19,11 +20,14 @@ _LEADERBOARD_KEYS = [
     "scene_id",
     "execution_datetime",
     "provider",
+    "run_name",
     "llm_config",
     "num_subgoals",
     "num_finished",
     "subgoal_success_rate",
     "success",
+    "failed",
+    "error_type",
     "evaluated_from",
 ]
 
@@ -65,6 +69,48 @@ def get_llm_run_config(config: LLMConfig) -> dict:
         op.setdefault("timeout", c.timeout)
         return op
     return {}
+
+
+def make_failed_result(
+    run_uuid: str,
+    task_key: str,
+    scene_folder: str,
+    task_type: str,
+    task_id: int,
+    scene_id: int,
+    provider: str,
+    llm_config: Dict[str, object],
+    run_name: Optional[str],
+    error_type: str,
+    error_message: str,
+    num_subgoals: int = 0,
+    raw: str = "",
+    sanitized: str = "",
+) -> Dict[str, object]:
+    """Build a failed-evaluation result dict ready for save_detailed + append_leaderboard."""
+    return {
+        "uuid": run_uuid,
+        "task_key": task_key,
+        "scene_folder": scene_folder,
+        "task_type": task_type,
+        "task_id": task_id,
+        "scene_id": scene_id,
+        "execution_datetime": datetime.now().isoformat(),
+        "provider": provider,
+        "run_name": run_name,
+        "llm_config": llm_config,
+        "evaluated_from": None,
+        "failed": True,
+        "error_type": error_type,
+        "error_message": error_message,
+        "instruction_response_raw": raw,
+        "instruction_response_sanitized": sanitized,
+        "num_subgoals": num_subgoals,
+        "num_finished": 0,
+        "finished_subgoal_ids": [],
+        "subgoal_success_rate": 0.0,
+        "success": False,
+    }
 
 
 def save_detailed(result: dict, base_dir: Path = Path("evaluations")) -> Path:
