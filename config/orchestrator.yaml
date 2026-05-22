@@ -1,0 +1,102 @@
+# Task types to evaluate: obj, spt, or both
+task_types:
+  - obj
+  - spt
+
+# Navigation parameters shared across all LLM configs
+nav:
+  valid_range: 1
+  vis: false
+  waitkey: false
+
+# Optional: explicit scene_ids to evaluate (integer indices into sorted scene dirs).
+# If omitted, all scenes that have at least one task of the requested types are used.
+# scene_ids: [0, 2, 3, 4, 6, 7, 8]
+
+# LLM configurations to benchmark.
+# Each entry is evaluated for every scene × task combination.
+# run_name identifies the config in every leaderboard row and detailed result.
+#
+# Sampling parameters:
+#   temperature=0.0 + top_k=1  → greedy / fully deterministic
+#   temperature>0   + top_p    → nucleus sampling (top_k bounds the pool first, then top_p prunes)
+#   max_new_tokens for reasoning models is higher to accommodate chain-of-thought before the code;
+#   the sanitizer strips any non-robot lines before eval, so extra tokens don't harm execution.
+
+llm_configs:
+
+  # ── reasoning model ──────────────────────────────────────────────────────
+  # Deterministic baseline: same prompt always yields the same code.
+  # Reference point for all comparisons.
+  - run_name: jazari-reasoning-cold
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 300
+    parse_instruction:
+      model: reasoning
+      temperature: 0.0
+      top_k: 1
+      top_p: 1.0
+      max_new_tokens: 512
+    find_similar_category:
+      model: base
+
+  # Light sampling: small temperature + nucleus keeps output coherent but
+  # allows minor variation — useful for measuring robustness.
+  - run_name: jazari-reasoning-warm
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 300
+    parse_instruction:
+      model: reasoning
+      temperature: 0.2
+      top_k: 40
+      top_p: 0.9
+      max_new_tokens: 512
+    find_similar_category:
+      model: base
+
+  # ── fast model ────────────────────────────────────────────────────────────
+  # Deterministic fast-model baseline — reference for speed vs. quality trade-off.
+  - run_name: jazari-fast-cold
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 300
+    parse_instruction:
+      model: fast
+      temperature: 0.0
+      top_k: 1
+      top_p: 1.0
+      max_new_tokens: 256
+    find_similar_category:
+      model: base
+
+  # Sampled fast model — same sampling regime as reasoning-warm for apples-to-apples.
+  - run_name: jazari-fast-warm
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 300
+    parse_instruction:
+      model: fast
+      temperature: 0.2
+      top_k: 40
+      top_p: 0.9
+      max_new_tokens: 256
+    find_similar_category:
+      model: base
+
+  # ── base model ────────────────────────────────────────────────────────────
+  # Smallest / cheapest model, deterministic only.
+  # Acts as the floor benchmark.
+  - run_name: jazari-base-cold
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 300
+    parse_instruction:
+      model: base
+      temperature: 0.0
+      top_k: 1
+      top_p: 1.0
+      max_new_tokens: 256
+    find_similar_category:
+      model: base

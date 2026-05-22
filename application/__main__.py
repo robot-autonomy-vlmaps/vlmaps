@@ -12,6 +12,7 @@ from application.evaluation.compute_object_goal_navigation_metrics import main a
 from application.evaluation.compute_spatial_goal_navigation_metrics import main as compute_spatial_goal_nav_main
 from application.evaluation.evaluate_object_goal_navigation import main as eval_object_goal_nav_main
 from application.evaluation.evaluate_spatial_goal_navigation import main as eval_spatial_goal_nav_main
+from application.evaluation.orchestrate import main as orchestrate_main
 from application.evaluation.reevaluate_object_goal_navigation import main as reevaluate_object_goal_nav_main
 from application.evaluation.reevaluate_spatial_goal_navigation import main as reevaluate_spatial_goal_nav_main
 from application.index_map import main as index_map_main
@@ -86,6 +87,15 @@ def eval_spatial(overrides: Optional[List[str]] = typer.Argument(None, help="Hyd
 @eval_app.command("spatial-compute", help="Compute metrics for spatial-goal navigation")
 def eval_spatial_compute(overrides: Optional[List[str]] = typer.Argument(None, help="Hydra overrides, e.g., scene_id=0")) -> None:
     _compose_and_call(compute_spatial_goal_nav_main, "spatial_goal_navigation_cfg", overrides)
+
+
+@eval_app.command("orchestrate", help="Run multi-config benchmark across all scenes and tasks")
+def eval_orchestrate(
+    config: Optional[str] = typer.Option(
+        None, "--config", "-c", help="Path to orchestrator.yaml (defaults to config/orchestrator.yaml)"
+    ),
+) -> None:
+    orchestrate_main(config_path=config)
 
 
 @eval_app.command(
