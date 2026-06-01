@@ -1,5 +1,7 @@
 import logging
+from typing import Optional
 
+from vlmaps.llm.base import LLMProvider
 from vlmaps.llm.factory import get_llm_provider
 
 logger = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ def _sanitize_spatial_code(output: str) -> str:
     return "\n".join(kept_lines)
 
 
-def parse_instruction(language_instr):
+def parse_instruction(language_instr, provider: Optional[LLMProvider] = None):
     """
     Unified instruction parser that generates robot code for any navigation instruction.
     Works for both object goal navigation and spatial goal navigation.
@@ -53,7 +55,8 @@ def parse_instruction(language_instr):
     Example: "go to the chair, then the table" -> "robot.move_to_object('chair')\nrobot.move_to_object('table')"
     Example: "move to the left of the plant" -> "robot.move_to_left('plant')"
     """
-    provider = get_llm_provider()
+    if provider is None:
+        provider = get_llm_provider()
     instructions_list = [language_instr]
     raw_responses = []
     sanitized_results = ""

@@ -12,6 +12,8 @@ from application.evaluation.compute_object_goal_navigation_metrics import main a
 from application.evaluation.compute_spatial_goal_navigation_metrics import main as compute_spatial_goal_nav_main
 from application.evaluation.evaluate_object_goal_navigation import main as eval_object_goal_nav_main
 from application.evaluation.evaluate_spatial_goal_navigation import main as eval_spatial_goal_nav_main
+from application.analysis.analyze import main as analyze_main
+from application.evaluation.orchestrate import main as orchestrate_main
 from application.evaluation.reevaluate_object_goal_navigation import main as reevaluate_object_goal_nav_main
 from application.evaluation.reevaluate_spatial_goal_navigation import main as reevaluate_spatial_goal_nav_main
 from application.index_map import main as index_map_main
@@ -88,6 +90,15 @@ def eval_spatial_compute(overrides: Optional[List[str]] = typer.Argument(None, h
     _compose_and_call(compute_spatial_goal_nav_main, "spatial_goal_navigation_cfg", overrides)
 
 
+@eval_app.command("orchestrate", help="Run multi-config benchmark across all scenes and tasks")
+def eval_orchestrate(
+    config: Optional[str] = typer.Option(
+        None, "--config", "-c", help="Path to orchestrator.yaml (defaults to config/orchestrator.yaml)"
+    ),
+) -> None:
+    orchestrate_main(config_path=config)
+
+
 @eval_app.command(
     "object-reeval",
     help="Re-evaluate an object-goal navigation execution (result_path comes from Hydra config/overrides)",
@@ -110,6 +121,15 @@ def eval_spatial_reeval(
     ),
 ) -> None:
     _compose_and_call(reevaluate_spatial_goal_nav_main, "spatial_goal_navigation_cfg", overrides)
+
+
+@app.command("analyze", help="Analyze evaluation results and generate reports, CSVs, and figures")
+def analyze(
+    leaderboard: str = typer.Option("evaluations/leaderboard.jsonl", "--leaderboard", "-l"),
+    detailed: str = typer.Option("evaluations/detailed", "--detailed", "-d"),
+    output: str = typer.Option("evaluations/analysis", "--output", "-o"),
+) -> None:
+    analyze_main(leaderboard=leaderboard, detailed_dir=detailed, output_dir=output)
 
 
 app.add_typer(dataset_app, name="dataset")

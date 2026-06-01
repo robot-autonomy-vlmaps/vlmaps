@@ -4,6 +4,7 @@ import threading
 from vlmaps.llm.base import LLMProvider
 from vlmaps.llm.config import LLMConfig, get_api_key_from_env, load_llm_config
 from vlmaps.llm.providers.openai_provider import OpenAIProvider
+from vlmaps.llm.providers.jazari_provider import JazariProvider
 
 _PROVIDER: Optional[LLMProvider] = None
 _PROVIDER_LOCK = threading.Lock()
@@ -15,6 +16,8 @@ def create_llm_provider(config: LLMConfig, api_key: Optional[str] = None) -> LLM
 
     if provider == "openai" and config.openai:
         return OpenAIProvider(api_key=key, config=config.openai)
+    elif provider == "jazari" and config.jazari:
+        return JazariProvider(api_key=key, config=config.jazari)
 
     raise ValueError(f"Unsupported LLM provider '{config.provider}'")
 

@@ -1,0 +1,258 @@
+# ============================================================================
+#  OFAT + n-sample robustness benchmark
+# ----------------------------------------------------------------------------
+#  Design principles
+#   • OFAT (one-factor-at-a-time): when one sampling knob is swept, the other
+#     two sit at NEUTRAL so the effect is unconfounded.
+#       neutral temperature = 1.0   (no scaling)
+#       neutral top_p       = 1.0   (nucleus includes everything)
+#       neutral top_k       = 0     (disabled; use -1 on vLLM)
+#   • temp 0.0 is the greedy CONTROL, not a sweep point.
+#   • n-sample robustness: temp>0 runs draw n_samples per prompt so variance,
+#     pass@k and self-consistency are measurable. temp=0 draws 2 as a
+#     determinism CHECK (both must be byte-identical).
+#
+#  Runner-support note: n_samples, seed, and the eval.* block below are NOT in
+#  the original schema. The orchestrator must (a) draw n_samples generations
+#  per prompt using seed = seed + sample_idx, (b) record finish_reason per
+#  generation, (c) compute the metrics in eval.metrics. Flag if unsupported.
+# ============================================================================
+
+task_types:
+  - obj
+  - spt
+
+nav:
+  valid_range: 1
+  vis: false
+  waitkey: false
+
+# Global evaluation settings (runner-dependent).
+eval:
+  seed: 1234                 # per-sample seed = seed + sample_index
+  log_finish_reason: true    # detect 'length' truncations (esp. reasoning model)
+  metrics:
+    - success_rate           # task pass rate
+    - pass@1
+    - pass@5                 # unbiased estimator, Chen et al. 2021
+    - self_consistency       # majority vote over samples (Wang et al. 2022)
+    - success_rate_std       # variance across the n samples
+    - output_diversity       # distinct-output rate across the n samples
+  confidence_interval: wilson   # CI on success_rate / pass@1
+
+llm_configs:
+
+# ════════════════════════════════════════════════════════════════════════════
+#  REASONING MODEL — primary subject, full OFAT on all three axes
+# ════════════════════════════════════════════════════════════════════════════
+
+# ── Greedy control + determinism check ──────────────────────────────────────
+  - run_name: reason-greedy-control
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 2            # both must be identical; if not, backend != argmax at T=0
+    parse_instruction:
+      model: reasoning
+      temperature: 0.0
+      top_k: 1
+      top_p: 1.0
+      max_new_tokens: 1536  # headroom for CoT; sanitizer trims overshoot
+    find_similar_category:
+      model: base
+
+# ── AXIS A: temperature sweep  (top_p=1.0, top_k=0 held neutral) ─────────────
+  - run_name: reason-A-temp0.2
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.2, top_k: 0, top_p: 1.0, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-A-temp0.4
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.4, top_k: 0, top_p: 1.0, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-A-temp0.6
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.6, top_k: 0, top_p: 1.0, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-A-temp0.8           # also serves as anchor for axes B & C
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.8, top_k: 0, top_p: 1.0, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-A-temp1.0
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 1.0, top_k: 0, top_p: 1.0, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-A-temp1.2
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 1.2, top_k: 0, top_p: 1.0, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+# ── AXIS B: top_p sweep  (temp=0.8, top_k=0 held; top_p=1.0 covered by A) ────
+  - run_name: reason-B-topp0.5
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.8, top_k: 0, top_p: 0.5, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-B-topp0.7
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.8, top_k: 0, top_p: 0.7, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-B-topp0.9
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.8, top_k: 0, top_p: 0.9, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-B-topp0.95
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.8, top_k: 0, top_p: 0.95, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+# ── AXIS C: top_k sweep  (temp=0.8, top_p=1.0 held; top_k=0 covered by A) ────
+  - run_name: reason-C-topk1
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.8, top_k: 1, top_p: 1.0, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-C-topk10
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.8, top_k: 10, top_p: 1.0, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-C-topk40
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.8, top_k: 40, top_p: 1.0, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+  - run_name: reason-C-topk100
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: reasoning, temperature: 0.8, top_k: 100, top_p: 1.0, max_new_tokens: 1536 }
+    find_similar_category: { model: base }
+
+# ════════════════════════════════════════════════════════════════════════════
+#  FAST MODEL — matched temperature sweep for cross-model comparison
+#  (same Axis-A grid; skip B/C unless the temp curve warrants it)
+# ════════════════════════════════════════════════════════════════════════════
+
+  - run_name: fast-greedy-control
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 2
+    parse_instruction: { model: fast, temperature: 0.0, top_k: 1, top_p: 1.0, max_new_tokens: 256 }
+    find_similar_category: { model: base }
+
+  - run_name: fast-A-temp0.2
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: fast, temperature: 0.2, top_k: 0, top_p: 1.0, max_new_tokens: 256 }
+    find_similar_category: { model: base }
+
+  - run_name: fast-A-temp0.4
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: fast, temperature: 0.4, top_k: 0, top_p: 1.0, max_new_tokens: 256 }
+    find_similar_category: { model: base }
+
+  - run_name: fast-A-temp0.6
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: fast, temperature: 0.6, top_k: 0, top_p: 1.0, max_new_tokens: 256 }
+    find_similar_category: { model: base }
+
+  - run_name: fast-A-temp0.8
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: fast, temperature: 0.8, top_k: 0, top_p: 1.0, max_new_tokens: 256 }
+    find_similar_category: { model: base }
+
+  - run_name: fast-A-temp1.0
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: fast, temperature: 1.0, top_k: 0, top_p: 1.0, max_new_tokens: 256 }
+    find_similar_category: { model: base }
+
+  - run_name: fast-A-temp1.2
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: fast, temperature: 1.2, top_k: 0, top_p: 1.0, max_new_tokens: 256 }
+    find_similar_category: { model: base }
+
+# ════════════════════════════════════════════════════════════════════════════
+#  BASE MODEL — floor benchmark. Greedy control + one sampled point only.
+# ════════════════════════════════════════════════════════════════════════════
+
+  - run_name: base-greedy-control
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 2
+    parse_instruction: { model: base, temperature: 0.0, top_k: 1, top_p: 1.0, max_new_tokens: 256 }
+    find_similar_category: { model: base }
+
+  - run_name: base-A-temp0.8
+    provider: jazari
+    base_url: http://localhost:8000
+    timeout: 60
+    n_samples: 3
+    parse_instruction: { model: base, temperature: 0.8, top_k: 0, top_p: 1.0, max_new_tokens: 256 }
+    find_similar_category: { model: base }

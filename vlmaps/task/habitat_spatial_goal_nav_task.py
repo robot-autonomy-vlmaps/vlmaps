@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import os
+from datetime import datetime
 from typing import Dict, List, Tuple, Union, Optional
 import logging
 
@@ -96,71 +97,56 @@ class HabitatSpatialGoalNavigationTask(HabitatTask):
         self.distance_to_subgoals.append(min_dist * self.vlmaps_dataloader.cs)
 
         self.curr_subgoal_id += 1
+        # Update SR after every subgoal attempt, not only when all are reached
+        self.subgoal_success_rate = float(len(self.finished_subgoals)) / self.n_subgoals_in_task
 
         if len(self.finished_subgoals) == self.n_subgoals_in_task:
             self.success = True
             self.n_success_tasks += 1
             self.n_tot_tasks += 1
             self.n_tot_subgoals += self.n_subgoals_in_task
-            self.n_success_subgoals += len(self.finished_subgoals)
-            self.subgoal_success_rate = float(len(self.finished_subgoals)) / self.n_subgoals_in_task
+            # n_success_subgoals is already incremented per-subgoal above (line 94)
 
-    def save_single_task_metric(
+    def get_result_dict(
         self,
+        run_uuid: str,
+        task_key: str,
+        scene_folder: str,
+        task_type: str,
         scene_id: int,
-        task_id: int,
-        execution_id: str,
-        execution_datetime: str,
-        instruction_provider: str,
+        provider: str,
+        llm_config: dict,
         instruction_response_raw: str,
         instruction_response_sanitized: str,
         forward_dist: float = 0.05,
         turn_angle: float = 1,
         evaluated_from: Optional[str] = None,
-    ):
-        """
-        Save metrics for a single spatial goal navigation task execution.
-
-        Results are stored under:
-            ./data/task_results/{scene_id}/spatial/{task_id}/{execution_datetime_safe}_{execution_id}.json
-
-        If this execution is a re-evaluation of a previous run, the original
-        execution id can be recorded via `evaluated_from`, which is saved
-        as the `evaluatedFrom` field in the result JSON.
-        """
-        # Build new folder structure path:
-        # ./data/task_results/{scene_id}/spatial/{task_id}/{execution_datetime}_{execution_id}.json
-        # Make execution_datetime filesystem-safe by replacing colons and dots with underscores
-        execution_datetime_safe = execution_datetime.replace(":", "_").replace(".", "_")
-        filename = f"{execution_datetime_safe}_{execution_id}.json"
-        save_dir = Path("./data/task_results") / str(scene_id) / "spatial" / str(task_id)
-        os.makedirs(save_dir, exist_ok=True)
-        save_path = save_dir / filename
-
-        results_dict = {}
-        # New metadata fields
-        results_dict["scene_id"] = scene_id
-        results_dict["task_id"] = task_id
-        results_dict["execution_id"] = execution_id
-        results_dict["execution_datetime"] = execution_datetime
-        results_dict["instruction_provider"] = instruction_provider
-        results_dict["instruction_response_raw"] = instruction_response_raw
-        results_dict["instruction_response_sanitized"] = instruction_response_sanitized
-        if evaluated_from is not None:
-            results_dict["evaluatedFrom"] = evaluated_from
-        # Existing fields
-        results_dict["scene"] = self.scene
-        results_dict["num_subgoals"] = self.n_subgoals_in_task
-        # results_dict["num_subgoal_success"] = self.n_success_subgoals
-        results_dict["subgoal_success_rate"] = self.subgoal_success_rate
-        results_dict["finished_subgoal_ids"] = self.finished_subgoals
-        results_dict["instruction"] = self.instruction
-        results_dict["forward_dict"] = forward_dist
-        results_dict["turn_angle"] = turn_angle
-        results_dict["init_tf_hab"] = self.init_hab_tf.tolist()
-        results_dict["actions"] = self.actions
-        with open(save_path, "w") as f:
-            json.dump(results_dict, f, indent=4)
+    ) -> dict:
+        return {
+            "uuid": run_uuid,
+            "task_key": task_key,
+            "scene_folder": scene_folder,
+            "task_type": task_type,
+            "task_id": self.task_id,
+            "scene_id": scene_id,
+            "execution_datetime": datetime.now().isoformat(),
+            "provider": provider,
+            "llm_config": llm_config,
+            "evaluated_from": evaluated_from,
+            "instruction": self.instruction,
+            "instruction_response_raw": instruction_response_raw,
+            "instruction_response_sanitized": instruction_response_sanitized,
+            "num_subgoals": self.n_subgoals_in_task,
+            "num_finished": len(self.finished_subgoals),
+            "finished_subgoal_ids": self.finished_subgoals,
+            "subgoal_success_rate": self.subgoal_success_rate,
+            "success": self.success,
+            "distance_to_subgoals": self.distance_to_subgoals,
+            "actions": self.actions,
+            "init_tf_hab": self.init_hab_tf.tolist(),
+            "forward_dist": forward_dist,
+            "turn_angle": turn_angle,
+        }
 
 
 @hydra.main(
