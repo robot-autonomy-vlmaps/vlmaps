@@ -97,14 +97,15 @@ class HabitatSpatialGoalNavigationTask(HabitatTask):
         self.distance_to_subgoals.append(min_dist * self.vlmaps_dataloader.cs)
 
         self.curr_subgoal_id += 1
+        # Update SR after every subgoal attempt, not only when all are reached
+        self.subgoal_success_rate = float(len(self.finished_subgoals)) / self.n_subgoals_in_task
 
         if len(self.finished_subgoals) == self.n_subgoals_in_task:
             self.success = True
             self.n_success_tasks += 1
             self.n_tot_tasks += 1
             self.n_tot_subgoals += self.n_subgoals_in_task
-            self.n_success_subgoals += len(self.finished_subgoals)
-            self.subgoal_success_rate = float(len(self.finished_subgoals)) / self.n_subgoals_in_task
+            # n_success_subgoals is already incremented per-subgoal above (line 94)
 
     def get_result_dict(
         self,
