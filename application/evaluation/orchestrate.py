@@ -6,6 +6,9 @@ Each task × config combination is evaluated independently; failures are
 caught per-task so the run continues even when a model produces bad code
 or an API call times out.
 
+For configs with n_samples > 1 the LLM is called n_samples times per prompt
+so that pass@k, self-consistency and output diversity can be measured later.
+
 Usage:
     vlmaps eval orchestrate
     vlmaps eval orchestrate --config path/to/custom_orchestrator.yaml
@@ -92,11 +95,13 @@ def _build_llm_config(entry: dict) -> LLMConfig:
     raise ValueError(f"Unsupported provider: {provider}")
 
 
-def _llm_run_config_dict(entry: dict) -> Dict[str, object]:
-    """Flatten parse_instruction settings + provider-level fields for storage."""
+def _llm_run_config_dict(entry: dict, eval_seed: int = 0) -> Dict[str, object]:
+    """Flatten parse_instruction settings + provider-level and sampling fields for storage."""
     op: Dict[str, object] = dict(entry.get("parse_instruction") or {})
     op.setdefault("base_url", entry.get("base_url"))
     op.setdefault("timeout", entry.get("timeout"))
+    op.setdefault("n_samples", entry.get("n_samples", 1))
+    op.setdefault("eval_seed", eval_seed)
     return op
 
 
@@ -129,6 +134,25 @@ def _discover_scenes(
 # Main
 # ---------------------------------------------------------------------------
 
+def _load_done_set(lb_path: Path) -> set:
+    """Load (task_key, run_name, sample_idx) tuples already successfully recorded."""
+    done: set = set()
+    if not lb_path.exists():
+        return done
+    with open(lb_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                r = json.loads(line)
+                if not r.get("failed", True):
+                    done.add((r["task_key"], r["run_name"], int(r.get("sample_idx", 0))))
+            except Exception:
+                pass
+    return done
+
+
 def main(config_path: Optional[str] = None) -> None:
     setup_logging()
     os.environ["MAGNUM_LOG"] = "quiet"
@@ -139,26 +163,38 @@ def main(config_path: Optional[str] = None) -> None:
     nav_cfg: dict = orch_cfg.get("nav", {})
     scene_ids_filter: Optional[List[int]] = orch_cfg.get("scene_ids")
 
+    eval_cfg: dict = orch_cfg.get("eval", {})
+    eval_seed: int = int(eval_cfg.get("seed", 0))
+
+    # --- Resume: skip already-completed (task_key, run_name, sample_idx) ---
+    lb_path = Path(orch_cfg.get("leaderboard_path", "evaluations/leaderboard.jsonl"))
+    done_set = _load_done_set(lb_path)
+    if done_set:
+        logger.info("Resume mode: %d samples already recorded — will skip.", len(done_set))
+
     # --- Build providers ---
     providers = []
     for entry in orch_cfg.get("llm_configs", []):
         run_name: str = entry.get("run_name") or make_run_name()
         llm_config = _build_llm_config(entry)
         provider_obj = create_llm_provider(llm_config)
-        llm_run_cfg = _llm_run_config_dict(entry)
+        llm_run_cfg = _llm_run_config_dict(entry, eval_seed)
+        n_samples = int(entry.get("n_samples", 1))
         providers.append(
             {
                 "run_name": run_name,
                 "provider_name": entry["provider"],
                 "provider": provider_obj,
                 "llm_config": llm_run_cfg,
+                "n_samples": n_samples,
             }
         )
         logger.info(
-            "Config registered: %s  (%s / %s)",
+            "Config registered: %s  (%s / %s)  n_samples=%d",
             run_name,
             entry["provider"],
             (entry.get("parse_instruction") or {}).get("model", "?"),
+            n_samples,
         )
 
     if not providers:
@@ -230,95 +266,117 @@ def main(config_path: Optional[str] = None) -> None:
                 num_subgoals = task.n_subgoals_in_task
 
                 for p in providers:
-                    run_uuid = uuid7()
                     run_name = p["run_name"]
                     provider_obj = p["provider"]
                     provider_name = p["provider_name"]
                     llm_run_cfg = p["llm_config"]
+                    n_samples = p["n_samples"]
 
-                    logger.info("  %s | %s", task_key, run_name)
+                    logger.info("  %s | %s | n_samples=%d", task_key, run_name, n_samples)
 
-                    # Phase 1: LLM call
-                    try:
-                        raw, sanitized = parse_instruction(instruction, provider=provider_obj)
-                    except Exception as exc:
-                        logger.warning("llm_error %s [%s]: %s", task_key, run_name, exc)
-                        result = make_failed_result(
-                            run_uuid, task_key, scene_folder, task_type, task_id,
-                            scene_id, provider_name, llm_run_cfg, run_name,
-                            "llm_error", str(exc), num_subgoals=num_subgoals,
+                    for sample_idx in range(n_samples):
+                        if (task_key, run_name, sample_idx) in done_set:
+                            logger.debug("Skipping %s [%s] si=%d — already done", task_key, run_name, sample_idx)
+                            continue
+
+                        run_uuid = uuid7()
+
+                        # Phase 1: LLM call
+                        try:
+                            raw, sanitized = parse_instruction(instruction, provider=provider_obj)
+                        except Exception as exc:
+                            logger.warning(
+                                "llm_error %s [%s] sample=%d: %s",
+                                task_key, run_name, sample_idx, exc,
+                            )
+                            result = make_failed_result(
+                                run_uuid, task_key, scene_folder, task_type, task_id,
+                                scene_id, provider_name, llm_run_cfg, run_name,
+                                "llm_error", str(exc), num_subgoals=num_subgoals,
+                                sample_idx=sample_idx, n_samples=n_samples,
+                            )
+                            save_detailed(result)
+                            append_leaderboard(result)
+                            run_results.append(result)
+                            continue
+
+                        # Phase 2: Code execution → record actions
+                        robot.empty_recorded_actions()
+                        robot.set_agent_state(init_hab_tf)
+                        try:
+                            for line in sanitized.split("\n"):
+                                if line:
+                                    eval(line)
+                        except Exception as exc:
+                            logger.warning(
+                                "code_error %s [%s] sample=%d: %s",
+                                task_key, run_name, sample_idx, exc,
+                            )
+                            result = make_failed_result(
+                                run_uuid, task_key, scene_folder, task_type, task_id,
+                                scene_id, provider_name, llm_run_cfg, run_name,
+                                "code_error", str(exc), num_subgoals=num_subgoals,
+                                raw=raw, sanitized=sanitized,
+                                sample_idx=sample_idx, n_samples=n_samples,
+                            )
+                            save_detailed(result)
+                            append_leaderboard(result)
+                            run_results.append(result)
+                            continue
+
+                        # Phase 3: Simulation replay
+                        recorded_actions = robot.get_recorded_actions()
+                        robot.set_agent_state(init_hab_tf)
+                        task.setup_task(task_id)  # reset per-sample metrics before replay
+                        try:
+                            for action in recorded_actions:
+                                task.test_step(robot.sim, action, vis=False)
+                        except Exception as exc:
+                            logger.warning(
+                                "sim_error %s [%s] sample=%d: %s",
+                                task_key, run_name, sample_idx, exc,
+                            )
+                            result = make_failed_result(
+                                run_uuid, task_key, scene_folder, task_type, task_id,
+                                scene_id, provider_name, llm_run_cfg, run_name,
+                                "sim_error", str(exc), num_subgoals=num_subgoals,
+                                raw=raw, sanitized=sanitized,
+                                sample_idx=sample_idx, n_samples=n_samples,
+                            )
+                            save_detailed(result)
+                            append_leaderboard(result)
+                            run_results.append(result)
+                            continue
+
+                        result = task.get_result_dict(
+                            run_uuid=run_uuid,
+                            task_key=task_key,
+                            scene_folder=scene_folder,
+                            task_type=task_type,
+                            scene_id=scene_id,
+                            provider=provider_name,
+                            llm_config=llm_run_cfg,
+                            instruction_response_raw=raw,
+                            instruction_response_sanitized=sanitized,
                         )
+                        result["sample_idx"] = sample_idx
+                        result["n_samples"] = n_samples
+                        result["run_name"] = run_name
+                        result["failed"] = False
+                        result["error_type"] = None
+
                         save_detailed(result)
                         append_leaderboard(result)
                         run_results.append(result)
-                        continue
 
-                    # Phase 2: Code execution → record actions
-                    robot.empty_recorded_actions()
-                    robot.set_agent_state(init_hab_tf)
-                    try:
-                        for line in sanitized.split("\n"):
-                            if line:
-                                eval(line)
-                    except Exception as exc:
-                        logger.warning("code_error %s [%s]: %s", task_key, run_name, exc)
-                        result = make_failed_result(
-                            run_uuid, task_key, scene_folder, task_type, task_id,
-                            scene_id, provider_name, llm_run_cfg, run_name,
-                            "code_error", str(exc), num_subgoals=num_subgoals,
-                            raw=raw, sanitized=sanitized,
+                        logger.info(
+                            "  %s [%s] sample=%d success=%s sub_sr=%.2f",
+                            task_key,
+                            run_name,
+                            sample_idx,
+                            result["success"],
+                            result["subgoal_success_rate"],
                         )
-                        save_detailed(result)
-                        append_leaderboard(result)
-                        run_results.append(result)
-                        continue
-
-                    # Phase 3: Simulation replay
-                    recorded_actions = robot.get_recorded_actions()
-                    robot.set_agent_state(init_hab_tf)
-                    task.setup_task(task_id)  # reset per-task metrics before replay
-                    try:
-                        for action in recorded_actions:
-                            task.test_step(robot.sim, action, vis=False)
-                    except Exception as exc:
-                        logger.warning("sim_error %s [%s]: %s", task_key, run_name, exc)
-                        result = make_failed_result(
-                            run_uuid, task_key, scene_folder, task_type, task_id,
-                            scene_id, provider_name, llm_run_cfg, run_name,
-                            "sim_error", str(exc), num_subgoals=num_subgoals,
-                            raw=raw, sanitized=sanitized,
-                        )
-                        save_detailed(result)
-                        append_leaderboard(result)
-                        run_results.append(result)
-                        continue
-
-                    result = task.get_result_dict(
-                        run_uuid=run_uuid,
-                        task_key=task_key,
-                        scene_folder=scene_folder,
-                        task_type=task_type,
-                        scene_id=scene_id,
-                        provider=provider_name,
-                        llm_config=llm_run_cfg,
-                        instruction_response_raw=raw,
-                        instruction_response_sanitized=sanitized,
-                    )
-                    result["run_name"] = run_name
-                    result["failed"] = False
-                    result["error_type"] = None
-
-                    save_detailed(result)
-                    append_leaderboard(result)
-                    run_results.append(result)
-
-                    logger.info(
-                        "  %s [%s] success=%s sub_sr=%.2f",
-                        task_key,
-                        run_name,
-                        result["success"],
-                        result["subgoal_success_rate"],
-                    )
 
     metrics = compute_aggregate(run_results)
     log_aggregate(metrics, logger)

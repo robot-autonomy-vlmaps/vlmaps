@@ -5,7 +5,8 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from math import comb, sqrt
+from typing import Dict, List, Optional, Tuple
 
 from vlmaps.llm.config import LLMConfig
 
@@ -22,6 +23,8 @@ _LEADERBOARD_KEYS = [
     "provider",
     "run_name",
     "llm_config",
+    "sample_idx",
+    "n_samples",
     "num_subgoals",
     "num_finished",
     "subgoal_success_rate",
@@ -30,6 +33,26 @@ _LEADERBOARD_KEYS = [
     "error_type",
     "evaluated_from",
 ]
+
+
+def pass_at_k(n: int, c: int, k: int) -> float:
+    """Unbiased pass@k estimator (Chen et al. 2021). Returns nan when n < k."""
+    if n < k:
+        return float("nan")
+    if n - c < k:
+        return 1.0
+    return 1.0 - comb(n - c, k) / comb(n, k)
+
+
+def wilson_ci(successes: int, total: int, z: float = 1.96) -> Tuple[float, float]:
+    """Wilson score confidence interval for a proportion. Returns (lo, hi)."""
+    if total == 0:
+        return 0.0, 0.0
+    p = successes / total
+    denom = 1 + z ** 2 / total
+    center = (p + z ** 2 / (2 * total)) / denom
+    margin = z * sqrt(p * (1 - p) / total + z ** 2 / (4 * total ** 2)) / denom
+    return max(0.0, center - margin), min(1.0, center + margin)
 
 
 def uuid7() -> str:
@@ -86,6 +109,8 @@ def make_failed_result(
     num_subgoals: int = 0,
     raw: str = "",
     sanitized: str = "",
+    sample_idx: int = 0,
+    n_samples: int = 1,
 ) -> Dict[str, object]:
     """Build a failed-evaluation result dict ready for save_detailed + append_leaderboard."""
     return {
@@ -99,6 +124,8 @@ def make_failed_result(
         "provider": provider,
         "run_name": run_name,
         "llm_config": llm_config,
+        "sample_idx": sample_idx,
+        "n_samples": n_samples,
         "evaluated_from": None,
         "failed": True,
         "error_type": error_type,
